@@ -12,8 +12,9 @@ SDV(Synthetic Data Vault)로 KT KDAP Flink 5분 TUMBLE 테스트용 데이터를
 
 ## SDV 모델
 
-- **bts_master + cdr_sgi_raw:** `HMASynthesizer` (FK: cell_id, referential integrity)
-- **cdr_mdt_smsng_raw:** `GaussianCopulaSynthesizer`
+- **bts_master + cdr_sgi_raw:** `HMASynthesizer` + unified `Metadata` API
+- **cdr_mdt_smsng_raw:** `GaussianCopulaSynthesizer` + `Metadata` API
+- **메타데이터 JSON:** `sdv/metadata/hma_metadata.json`, `mdt_metadata.json` (재현성·SDV 권장)
 
 ## Flink 정렬 후처리
 

@@ -1,0 +1,65 @@
+{
+    "tables": {
+        "bts_master": {
+            "columns": {
+                "cell_id": {
+                    "sdtype": "id"
+                },
+                "alt_cell_id": {
+                    "sdtype": "id"
+                },
+                "bts_alt_key": {
+                    "sdtype": "categorical"
+                },
+                "bts_market_nm": {
+                    "sdtype": "categorical"
+                },
+                "region_cd": {
+                    "sdtype": "categorical"
+                }
+            },
+            "primary_key": "cell_id"
+        },
+        "cdr_sgi_raw": {
+            "columns": {
+                "sgi_id": {
+                    "sdtype": "id"
+                },
+                "cell_id": {
+                    "sdtype": "id"
+                },
+                "alt_cell_id": {
+                    "sdtype": "id"
+                },
+                "rqt_st_dt": {
+                    "sdtype": "categorical"
+                },
+                "etl_date": {
+                    "sdtype": "categorical"
+                },
+                "val": {
+                    "sdtype": "numerical"
+                },
+                "use_flag": {
+                    "sdtype": "categorical"
+                },
+                "signal_type": {
+                    "sdtype": "categorical"
+                },
+                "event_time": {
+                    "sdtype": "datetime"
+                }
+            },
+            "primary_key": "sgi_id"
+        }
+    },
+    "relationships": [
+        {
+            "parent_table_name": "bts_master",
+            "child_table_name": "cdr_sgi_raw",
+            "parent_primary_key": "cell_id",
+            "child_foreign_key": "cell_id"
+        }
+    ],
+    "METADATA_SPEC_VERSION": "V1"
+}

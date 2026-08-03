@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 try:
-    from sdv.metadata import MultiTableMetadata, SingleTableMetadata
+    from sdv.metadata import Metadata
     from sdv.multi_table import HMASynthesizer
     from sdv.single_table import GaussianCopulaSynthesizer
 except ImportError:
@@ -31,6 +31,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent
 SEED_DIR = ROOT / "seed"
+METADATA_DIR = ROOT / "metadata"
 DEFAULT_OUTPUT = ROOT / "output"
 
 REGIONS = ["SEOUL", "BUSAN", "DAEGU", "INCHEON", "GWANGJU", "DAEJEON", "ULSAN", "SUWON", "JEJU", "CHANGWON"]
@@ -50,61 +51,30 @@ def load_seed() -> dict[str, pd.DataFrame]:
     return data
 
 
-def build_hma_metadata(seed: dict[str, pd.DataFrame]) -> MultiTableMetadata:
-    metadata = MultiTableMetadata()
+def _save_metadata(metadata: Metadata, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    metadata.save_to_json(path)
+    print(f"  saved metadata: {path}")
+
+
+def build_hma_metadata(seed: dict[str, pd.DataFrame], metadata_dir: Path) -> Metadata:
+    """Build multi-table Metadata (SDV 1.x unified API) for bts_master + cdr_sgi_raw."""
+    metadata = Metadata()
     metadata.detect_table_from_dataframe("bts_master", seed["bts_master"])
     metadata.detect_table_from_dataframe("cdr_sgi_raw", seed["cdr_sgi_raw"])
 
-    metadata.update_column(
-        "bts_master",
-        "cell_id",
-        sdtype="id",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "sgi_id",
-        sdtype="id",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "cell_id",
-        sdtype="id",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "alt_cell_id",
-        sdtype="id",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "val",
-        sdtype="numerical",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "event_time",
-        sdtype="datetime",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "rqt_st_dt",
-        sdtype="categorical",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "etl_date",
-        sdtype="categorical",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "use_flag",
-        sdtype="categorical",
-    )
-    metadata.update_column(
-        "cdr_sgi_raw",
-        "signal_type",
-        sdtype="categorical",
-    )
+    metadata.update_column("cell_id", table_name="bts_master", sdtype="id")
+    metadata.update_column("sgi_id", table_name="cdr_sgi_raw", sdtype="id")
+    metadata.update_column("cell_id", table_name="cdr_sgi_raw", sdtype="id")
+    metadata.update_column("alt_cell_id", table_name="cdr_sgi_raw", sdtype="id")
+    metadata.update_column("val", table_name="cdr_sgi_raw", sdtype="numerical")
+    metadata.update_column("event_time", table_name="cdr_sgi_raw", sdtype="datetime")
+    metadata.update_column("rqt_st_dt", table_name="cdr_sgi_raw", sdtype="categorical")
+    metadata.update_column("etl_date", table_name="cdr_sgi_raw", sdtype="categorical")
+    metadata.update_column("use_flag", table_name="cdr_sgi_raw", sdtype="categorical")
+    metadata.update_column("signal_type", table_name="cdr_sgi_raw", sdtype="categorical")
 
     metadata.add_relationship(
         parent_table_name="bts_master",
@@ -112,18 +82,23 @@ def build_hma_metadata(seed: dict[str, pd.DataFrame]) -> MultiTableMetadata:
         child_table_name="cdr_sgi_raw",
         child_foreign_key="cell_id",
     )
+
+    _save_metadata(metadata, metadata_dir / "hma_metadata.json")
     return metadata
 
 
-def build_mdt_metadata(seed: pd.DataFrame) -> SingleTableMetadata:
-    metadata = SingleTableMetadata()
-    metadata.detect_from_dataframe(seed)
-    metadata.update_column("mdt_id", sdtype="id")
-    metadata.update_column("gnss_utmkx", sdtype="numerical")
-    metadata.update_column("gnss_utmky", sdtype="numerical")
-    metadata.update_column("rqt_st_dt", sdtype="categorical")
-    metadata.update_column("bts_market_nm", sdtype="categorical")
-    metadata.update_column("event_time", sdtype="datetime")
+def build_mdt_metadata(seed: pd.DataFrame, metadata_dir: Path) -> Metadata:
+    """Build single-table Metadata for cdr_mdt_smsng_raw."""
+    metadata = Metadata()
+    metadata.detect_table_from_dataframe("cdr_mdt_smsng_raw", seed)
+    metadata.update_column("mdt_id", table_name="cdr_mdt_smsng_raw", sdtype="id")
+    metadata.update_column("gnss_utmkx", table_name="cdr_mdt_smsng_raw", sdtype="numerical")
+    metadata.update_column("gnss_utmky", table_name="cdr_mdt_smsng_raw", sdtype="numerical")
+    metadata.update_column("rqt_st_dt", table_name="cdr_mdt_smsng_raw", sdtype="categorical")
+    metadata.update_column("bts_market_nm", table_name="cdr_mdt_smsng_raw", sdtype="categorical")
+    metadata.update_column("event_time", table_name="cdr_mdt_smsng_raw", sdtype="datetime")
+
+    _save_metadata(metadata, metadata_dir / "mdt_metadata.json")
     return metadata
 
 
@@ -246,12 +221,13 @@ def expand_bts(seed_bts: pd.DataFrame, target_rows: int, rng: np.random.Generato
 def synthesize_sgi_with_hma(
     seed: dict[str, pd.DataFrame],
     target_rows: int,
+    metadata_dir: Path,
     verbose: bool,
 ) -> pd.DataFrame:
     seed_sgi_rows = len(seed["cdr_sgi_raw"])
     scale = max(target_rows / seed_sgi_rows, 1.0)
 
-    metadata = build_hma_metadata(seed)
+    metadata = build_hma_metadata(seed, metadata_dir)
     synthesizer = HMASynthesizer(metadata, verbose=verbose)
     synthesizer.fit({"bts_master": seed["bts_master"], "cdr_sgi_raw": seed["cdr_sgi_raw"]})
     synthetic = synthesizer.sample(scale=scale)
@@ -264,12 +240,10 @@ def synthesize_sgi_with_hma(
 def synthesize_mdt(
     seed_mdt: pd.DataFrame,
     target_rows: int,
-    verbose: bool,
+    metadata_dir: Path,
+    _verbose: bool,
 ) -> pd.DataFrame:
-    seed_rows = len(seed_mdt)
-    scale = max(target_rows / seed_rows, 1.0)
-
-    metadata = build_mdt_metadata(seed_mdt)
+    metadata = build_mdt_metadata(seed_mdt, metadata_dir)
     synthesizer = GaussianCopulaSynthesizer(metadata)
     synthesizer.fit(seed_mdt)
     return synthesizer.sample(num_rows=target_rows)
@@ -326,6 +300,12 @@ def main() -> None:
         help="Row targets: bts=5000, sgi=1000000, mdt=1000000 (repeatable)",
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Output directory")
+    parser.add_argument(
+        "--metadata-dir",
+        type=Path,
+        default=METADATA_DIR,
+        help="Directory for SDV metadata JSON (reproducibility)",
+    )
     parser.add_argument("--hours-span", type=int, default=6, help="event_time spread (hours)")
     parser.add_argument(
         "--filter-pass-ratio",
@@ -344,13 +324,13 @@ def main() -> None:
     seed = load_seed()
 
     print(f"==> SDV HMA: synthesizing cdr_sgi_raw (target {scales['sgi']:,} rows)")
-    sgi, bts_from_hma = synthesize_sgi_with_hma(seed, scales["sgi"], args.verbose)
+    sgi, bts_from_hma = synthesize_sgi_with_hma(seed, scales["sgi"], args.metadata_dir, args.verbose)
 
     print(f"==> Expanding bts_master (target {scales['bts']:,} rows)")
     bts = expand_bts(bts_from_hma if len(bts_from_hma) >= scales["bts"] else seed["bts_master"], scales["bts"], rng)
 
     print(f"==> SDV GaussianCopula: synthesizing cdr_mdt_smsng_raw (target {scales['mdt']:,} rows)")
-    mdt = synthesize_mdt(seed["cdr_mdt_smsng_raw"], scales["mdt"], args.verbose)
+    mdt = synthesize_mdt(seed["cdr_mdt_smsng_raw"], scales["mdt"], args.metadata_dir, args.verbose)
 
     print("==> Post-processing for Flink (event_time, rqt_st_dt minute=45, FK alignment)")
     sgi = apply_flink_sgi_postprocess(

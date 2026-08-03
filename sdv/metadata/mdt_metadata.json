@@ -1,0 +1,29 @@
+{
+    "tables": {
+        "cdr_mdt_smsng_raw": {
+            "columns": {
+                "mdt_id": {
+                    "sdtype": "id"
+                },
+                "gnss_utmkx": {
+                    "sdtype": "numerical"
+                },
+                "gnss_utmky": {
+                    "sdtype": "numerical"
+                },
+                "rqt_st_dt": {
+                    "sdtype": "categorical"
+                },
+                "bts_market_nm": {
+                    "sdtype": "categorical"
+                },
+                "event_time": {
+                    "sdtype": "datetime"
+                }
+            },
+            "primary_key": "mdt_id"
+        }
+    },
+    "relationships": [],
+    "METADATA_SPEC_VERSION": "V1"
+}
