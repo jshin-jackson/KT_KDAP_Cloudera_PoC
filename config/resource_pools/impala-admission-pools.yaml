@@ -1,0 +1,39 @@
+# Impala admission control / resource pool configuration
+# Apply via CM: Impala -> Configuration -> Admission Control
+# Or impala-shell: SET REQUEST_POOL=pool_ltas_batch;
+
+pools:
+  - name: pool_ltas_batch
+    max_mem_resources: 128849018880   # ~120 GB cluster-wide
+    max_requests: 1
+    queue_timeout: 600000             # 10 min
+    clamp_mem_limit_query_option: true
+    default_mem_limit: 85899345920    # 80 GB per query
+
+  - name: pool_sgi_batch_1
+    max_mem_resources: 171798691840   # ~160 GB (largest query ~254억 rows)
+    max_requests: 1
+    default_mem_limit: 128849018880   # 120 GB
+
+  - name: pool_sgi_batch_2
+    max_mem_resources: 85899345920
+    max_requests: 1
+    default_mem_limit: 64424509440    # 60 GB
+
+  - name: pool_mdt_batch
+    max_mem_resources: 128849018880
+    max_requests: 1
+    default_mem_limit: 85899345920
+
+  - name: pool_mstr_base
+    max_mem_resources: 171798691840
+    max_requests: 4
+    default_mem_limit: 42949672960    # 40 GB per MSTR query
+
+  - name: pool_mstr_cdw
+    # CDW VW manages executor resources; map via VW sizing
+    max_requests: 4
+
+# Scenario 5 note:
+# - SGi v2 may reuse v1 output → reduce to 3 batch pools if dependency confirmed
+# - CDW VW physically isolated on ECS workers (no Base impalad contention)

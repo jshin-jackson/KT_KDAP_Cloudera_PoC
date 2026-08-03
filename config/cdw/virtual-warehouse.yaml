@@ -1,0 +1,42 @@
+# CDW Virtual Warehouse specification for KT KDAP PoC Scenario 3
+# Deploy via CDP Data Services Console or cdp CLI
+
+name: kdap-mstr-vw
+type: impala
+environment: kdap-ecs-env
+
+compute:
+  ecs_workers: 4
+  impala_executor_pods_per_worker: 3
+  total_executor_pods: 12
+  vcores_per_pod: 8
+  memory_gb_per_pod: 64
+
+autoscaling:
+  enabled: false          # PoC: fixed size for reproducible benchmarks
+  min_pods: 12
+  max_pods: 12
+
+catalog:
+  type: hive
+  metastore_uri: thrift://kdap-base-m2.example.com:9083
+  default_database: kdap
+  iceberg_enabled: true
+
+connectivity:
+  jdbc_url: jdbc:impala://cdw-vw-impala.example.com:21050/kdap;AuthMech=1;KrbRealm=REALM
+  hs2_host: cdw-vw-impala.example.com
+  hs2_port: 21050
+
+workload:
+  target_concurrency: 4   # 4 MSTR queries simultaneous
+  query_timeout_sec: 7200 # VoLTE query ~1h
+
+benchmark:
+  shell_var: IMPALA_SHELL_CDW="impala-shell -k -i cdw-vw-impala.example.com:21050"
+  pre_warm_query: "SELECT 1"
+  always_on: true         # Avoid cold-start skew in S3 results
+
+notes:
+  - Shared HMS with Base cluster — Iceberg tables visible without duplicate ingest
+  - MSTR comparison matrix requires Base + CDW + combined runs (see run_scenario3_mstr.sh, run_scenario5_integrated.sh)

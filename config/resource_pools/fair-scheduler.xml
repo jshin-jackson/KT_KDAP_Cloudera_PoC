@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!--
+  YARN Fair Scheduler allocation for KT KDAP PoC
+  Deploy: CM -> YARN -> Configuration -> yarn-site.xml (fair-scheduler.xml)
+  Path on cluster: /etc/hadoop/conf/fair-scheduler.xml
+-->
+<allocations>
+  <queue name="root">
+    <weight>1.0</weight>
+    <schedulingPolicy>fair</schedulingPolicy>
+    <queue name="kdap_migration">
+      <weight>1.0</weight>
+      <maxResources>128000 mb, 32 vcores</maxResources>
+    </queue>
+    <queue name="kdap_batch">
+      <weight>4.0</weight>
+      <maxResources>512000 mb, 64 vcores</maxResources>
+      <queue name="pool_ltas_batch">
+        <weight>1.0</weight>
+        <maxRunningApps>1</maxRunningApps>
+      </queue>
+      <queue name="pool_sgi_batch_1">
+        <weight>1.0</weight>
+        <maxRunningApps>1</maxRunningApps>
+      </queue>
+      <queue name="pool_sgi_batch_2">
+        <weight>1.0</weight>
+        <maxRunningApps>1</maxRunningApps>
+      </queue>
+      <queue name="pool_mdt_batch">
+        <weight>1.0</weight>
+        <maxRunningApps>1</maxRunningApps>
+      </queue>
+    </queue>
+    <queue name="kdap_flink">
+      <weight>2.0</weight>
+      <maxResources>256000 mb, 32 vcores</maxResources>
+      <queue name="pool_flink_tm">
+        <weight>1.0</weight>
+      </queue>
+    </queue>
+    <queue name="kdap_mstr">
+      <weight>2.0</weight>
+      <maxResources>256000 mb, 32 vcores</maxResources>
+      <queue name="pool_mstr_base">
+        <weight>1.0</weight>
+        <maxRunningApps>4</maxRunningApps>
+      </queue>
+    </queue>
+  </queue>
+  <defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>
+</allocations>

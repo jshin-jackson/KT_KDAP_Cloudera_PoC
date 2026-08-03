@@ -1,0 +1,20 @@
+# Dependencies
+.DS_Store
+*.swp
+*.log
+
+# Results (keep templates only in git; commit run summaries optionally)
+docs/results/run_*/
+!docs/results/templates/
+
+# Local config overrides
+config/local/
+.env
+*.keytab
+
+# Generated SQL with secrets
+**/logs/
+
+# Python
+__pycache__/
+.venv/

@@ -1,0 +1,43 @@
+# Ranger policy templates for kdap database
+# Import via Ranger Admin UI after KT principal list confirmed
+
+policies:
+  - name: kdap-poc-analyst-read
+    service: cm_kdap
+    resources:
+      database: kdap
+      table: "*"
+      column: "*"
+    permissions: [select]
+    users: [kdap_analyst]
+    groups: [kt_poc_readers]
+
+  - name: kdap-poc-etl-write
+    service: cm_kdap
+    resources:
+      database: kdap
+      table: "*"
+    permissions: [select, insert, update, create]
+    users: [kdap_svc]
+    groups: [kt_poc_etl]
+
+  - name: kdap-results-read
+    service: cm_kdap
+    resources:
+      database: kdap_results
+      table: "*"
+    permissions: [select, insert]
+    users: [kdap_svc, kdap_analyst]
+
+  - name: kdap-staging-etl
+    service: cm_kdap
+    resources:
+      database: kdap_staging
+      table: "*"
+    permissions: [all]
+    users: [kdap_svc]
+
+# HDFS paths
+hdfs:
+  - path: /user/kdap/*
+    permissions: { kdap_svc: [read, write], kt_poc_etl: [read, write] }
