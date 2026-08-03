@@ -24,11 +24,22 @@ scripts/        Benchmark, profile, migration, monitoring
 config/         Resource pools, CDW VW, Ranger, firewall
 ```
 
-## Flink (시나리오 2) — jshin CDP 7.3.2
+## Environment (jshin CDP 7.3.2)
+
+```
+cp .env.example .env
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+```
+
+→ [docs/runbooks/env-setup.md](docs/runbooks/env-setup.md) · [config/cluster/jshin-cdp732.md](config/cluster/jshin-cdp732.md)
+
+## Flink (시나리오 2) — jshin CDP 7.3.2 / HDFS ns1
 
 **명령어 목록:** [flink/cdp-test/COMMANDS.md](flink/cdp-test/COMMANDS.md)
 
 ```
+export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -f flink/cdp-test/impala_01_create_tables.sql
 /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql

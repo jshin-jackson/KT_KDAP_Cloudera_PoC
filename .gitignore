@@ -7,6 +7,11 @@
 docs/results/run_*/
 !docs/results/templates/
 
+# SDV generated parquet (large)
+sdv/output/
+sdv/output/**/*
+!sdv/output/.gitkeep
+
 # Local config overrides
 config/local/
 .env

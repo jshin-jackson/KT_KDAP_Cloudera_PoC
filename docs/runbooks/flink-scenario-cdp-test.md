@@ -11,15 +11,23 @@ KT KDAP PoC **시나리오 2 (Flink 5분 TUMBLE 실시간 집계)** 를 Cloudera
 | 항목 | 값 |
 |------|-----|
 | CDP | 7.3.2 / Flink 1.20.1 |
+| HDFS | **ns1** → `hdfs://ns1` · `HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Impala | `ccycloud-5.jshin.root.comops.site:25003` (TLS) |
+| Python | **python3.11** (SDV — `python3` 3.8 parcel 사용 금지) |
 | Kerberos | `systest@QE-INFRA-AD.CLOUDERA.COM` + keytab |
 | Keytab | `/cdep/keytabs/systest.keytab` |
+| Iceberg warehouse | `hdfs://ns1/user/hive/warehouse` |
 
-**명령어 전체 목록:** [flink/cdp-test/COMMANDS.md](../../flink/cdp-test/COMMANDS.md)  
-**클러스터 설정 상세:** [config/cluster/jshin-cdp732.md](../../config/cluster/jshin-cdp732.md)  
+**환경 설정:** [docs/runbooks/env-setup.md](../../docs/runbooks/env-setup.md) · `cp .env.example .env`  
+**명령어 전체:** [flink/cdp-test/COMMANDS.md](../../flink/cdp-test/COMMANDS.md)  
+**클러스터 상세:** [config/cluster/jshin-cdp732.md](../../config/cluster/jshin-cdp732.md)  
 **Catalog SQL:** [flink/conf/00_catalog_setup_jshin.sql](../../flink/conf/00_catalog_setup_jshin.sql)
 
-### 최소 실행 4줄
+### 최소 실행
+
+```
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+```
 
 ```
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
@@ -27,10 +35,6 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 
 ```
 impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -f flink/cdp-test/impala_01_create_tables.sql
-```
-
-```
-impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -f flink/cdp-test/impala_02_sample_data.sql
 ```
 
 ```
