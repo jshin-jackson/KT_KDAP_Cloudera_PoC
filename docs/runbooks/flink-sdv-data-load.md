@@ -51,41 +51,28 @@ hdfs dfs -ls hdfs://ns1/user/kdap/staging/sdv/
 
 ---
 
-## 3. Spark — Parquet → Iceberg (권장)
+## 3. PySpark — Parquet → Iceberg (권장)
+
+> **참고:** `-k`는 Impala 전용입니다. **0단계 `kinit` 이후** `pyspark3`로 실행하세요.
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-spark3-shell -k --keytab /cdep/keytabs/systest.keytab --principal systest@QE-INFRA-AD.CLOUDERA.COM --driver-memory 4g --executor-memory 8g --num-executors 4
+pyspark3 --driver-memory 4g --executor-memory 8g --num-executors 4 sdv/load_sdv_to_iceberg.py
 ```
 
-Spark 프롬프트에서 순서대로:
+스크립트: [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)
 
-```
+대화형으로 실행하려면 `pyspark3`만 실행한 뒤 아래를 붙여넣습니다:
+
+```python
+staging = "hdfs://ns1/user/kdap/staging/sdv"
 spark.conf.set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkCatalog")
-```
-
-```
 spark.conf.set("spark.sql.catalog.spark_catalog.type", "hive")
-```
-
-```
 spark.conf.set("spark.hadoop.fs.defaultFS", "hdfs://ns1")
-```
-
-```
 spark.conf.set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-```
-
-```
-spark.read.parquet("hdfs://ns1/user/kdap/staging/sdv/bts_master.parquet").writeTo("iceberg.kdap.bts_master").overwritePartitions()
-```
-
-```
-spark.read.parquet("hdfs://ns1/user/kdap/staging/sdv/cdr_sgi_raw.parquet").writeTo("iceberg.kdap.cdr_sgi_raw").append()
-```
-
-```
-spark.read.parquet("hdfs://ns1/user/kdap/staging/sdv/cdr_mdt_smsng_raw.parquet").writeTo("iceberg.kdap.cdr_mdt_smsng_raw").append()
+spark.read.parquet(f"{staging}/bts_master.parquet").writeTo("iceberg.kdap.bts_master").overwritePartitions()
+spark.read.parquet(f"{staging}/cdr_sgi_raw.parquet").writeTo("iceberg.kdap.cdr_sgi_raw").append()
+spark.read.parquet(f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo("iceberg.kdap.cdr_mdt_smsng_raw").append()
 ```
 
 Impala 메타데이터 갱신:

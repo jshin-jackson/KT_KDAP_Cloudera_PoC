@@ -55,20 +55,19 @@ python3.11 sdv/generate_flink_data.py --scale bts=5000 --scale sgi=1000000 --sca
 impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "SELECT 1"
 ```
 
-## 6. Spark Iceberg (선택 — SDV Parquet 적재)
+## 6. PySpark Iceberg (선택 — SDV Parquet 적재)
+
+> **참고:** `-k`는 Impala 전용입니다. **3단계 `kinit` 이후** `pyspark3`로 실행하세요.
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-spark3-shell -k --keytab /cdep/keytabs/systest.keytab --principal systest@QE-INFRA-AD.CLOUDERA.COM
+pyspark3 sdv/load_sdv_to_iceberg.py
 ```
 
-Spark 프롬프트:
+대화형 확인:
 
-```
-spark.conf.set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkCatalog")
-spark.conf.set("spark.sql.catalog.spark_catalog.type", "hive")
-spark.conf.set("spark.hadoop.fs.defaultFS", "hdfs://ns1")
-spark.conf.set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+```python
+spark.sql("SHOW TABLES IN kdap").show()
 ```
 
 ## 7. Flink TLS

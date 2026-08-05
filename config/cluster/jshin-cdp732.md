@@ -81,17 +81,15 @@ Flink SQL Client JVM 옵션:
 
 Flink catalog SQL: [flink/conf/00_catalog_setup_jshin.sql](../../flink/conf/00_catalog_setup_jshin.sql)
 
-## Spark (Parquet → Iceberg 적재)
+## PySpark (Parquet → Iceberg 적재)
+
+`kinit` 후 실행 (`-k`는 Impala 전용):
 
 ```
-spark3-shell -k --keytab /cdep/keytabs/systest.keytab --principal systest@QE-INFRA-AD.CLOUDERA.COM
+pyspark3 sdv/load_sdv_to_iceberg.py
 ```
 
-Spark Iceberg 설정 (`.env.example` 참고):
-
-- `spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkCatalog`
-- `spark.sql.catalog.spark_catalog.type=hive`
-- `spark.hadoop.fs.defaultFS=hdfs://ns1`
+Iceberg 설정은 [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)에 포함되어 있습니다.
 
 ## Flink (CDP 7.3.2 / 1.20.1)
 
