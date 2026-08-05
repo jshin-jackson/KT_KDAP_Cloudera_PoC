@@ -2,9 +2,9 @@
 # Submit Catalog + Flink SQL via CSA-supported backends.
 #
 # Backends (FLINK_SUBMIT_BACKEND):
-#   auto       SSB if SSB_API_BASE (.env), else sql-client when bootstrapped, else SSB
-#   sql-client Apache Flink SQL Client (-f SQL files) — Hive catalog classpath fragile on CSA
-#   ssb        SSB REST API (recommended on jshin CDP 7.3.2)
+#   auto       sql-client when bootstrapped (default); else SSB if SSB_API_BASE set
+#   sql-client Apache Flink SQL Client — requires flink-sql-connector-hive in CSA lib/
+#   ssb        SSB REST API (optional; only if SQL Stream Builder is installed)
 #
 # Usage (from repo root):
 #   kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
@@ -39,19 +39,18 @@ load_repo_dotenv
 BACKEND="${FLINK_SUBMIT_BACKEND:-auto}"
 
 if [[ "$BACKEND" == "auto" ]]; then
-  if ssb_configured; then
-    BACKEND="ssb"
-    echo "Backend: ssb (SSB_API_BASE from env / .env — recommended for Iceberg Hive catalog)"
-  elif sql_client_ready; then
+  if sql_client_ready; then
     BACKEND="sql-client"
     echo "Backend: sql-client (${SQL_CLIENT_SOURCE})"
-    echo "WARN: sql-client + Iceberg Hive catalog often fails on CSA; prefer SSB (cp .env.example .env)" >&2
-  else
+  elif ssb_configured; then
     BACKEND="ssb"
-    echo "Backend: ssb (sql-client incomplete on this host)"
+    echo "Backend: ssb (sql-client not ready; using SSB_API_BASE)"
+  else
+    echo "ERROR: no submit backend available." >&2
     while IFS= read -r line; do
-      echo "  ${line}"
+      echo "  ${line}" >&2
     done < <(sql_client_bootstrap_status)
+    exit 1
   fi
 fi
 
@@ -62,55 +61,24 @@ fi
 if [[ "$BACKEND" == "sql-client" ]]; then
   if ! sql_client_ready; then
     echo "ERROR: sql-client not available." >&2
-    echo "  Bootstrap:" >&2
-    echo "    cp flink-1.20.1/bin/sql-client.sh \$CSA_FLINK/bin/" >&2
-    echo "    cp flink-1.20.1/opt/flink-sql-client-*.jar \$CSA_FLINK/lib/" >&2
-    echo "    cp flink-1.20.1/opt/flink-sql-gateway-*.jar \$CSA_FLINK/lib/" >&2
-    echo "    cp iceberg-flink-runtime-1.20-*.jar \$CSA_FLINK/lib/" >&2
-    echo "  Do NOT put flink-sql-connector-hive in lib/ (Calcite conflict). Use HIVE_HOME + HADOOP_CLASSPATH." >&2
-    echo "  Or script: ./scripts/bootstrap_flink_sql_client.sh /path/to/flink-${FLINK_VERSION:-1.20.1} --target parcel" >&2
-    echo "  Or use SSB:  FLINK_SUBMIT_BACKEND=ssb $0 ..." >&2
+    echo "  Bootstrap: ./scripts/bootstrap_flink_sql_client.sh /path/to/flink-${FLINK_VERSION:-1.20.1} --target parcel" >&2
+    exit 1
+  fi
+
+  if ! hive_connector_in_lib; then
+    echo "ERROR: flink-sql-connector-hive missing in ${CSA_FLINK_LIB}/lib/" >&2
+    echo "  Iceberg HiveCatalog needs this jar (embedded gateway ignores CDH -j)." >&2
+    echo "  Install:" >&2
+    echo "    cp ~/flink-1.20.1/opt/flink-sql-connector-hive-*.jar ${CSA_FLINK_LIB}/lib/" >&2
+    echo "    chown flink:flink ${CSA_FLINK_LIB}/lib/flink-sql-connector-hive-*.jar" >&2
+    echo "  submit uses -Dclassloader.resolve-order=parent-first to avoid INSERT Calcite conflict." >&2
     exit 1
   fi
 
   cd "${REPO_ROOT}"
-  collect_hive_metastore_jars
-  if ! hive_metastore_api_present; then
-    echo "ERROR: NoSuchObjectException not found in selected Hive jars." >&2
-    echo "  Embedded sql-client cannot load Iceberg HiveCatalog on this CDH layout." >&2
-    echo "  Use SSB instead:" >&2
-    echo "    cp .env.example .env && FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh" >&2
-    exit 1
-  fi
-  # Flink SQL Client accepts only ONE -f file; multiple -f flags ignore all but the first.
-  # Catalog + job: -i (init) for catalog DDL, -f for job SQL. Catalog-only: -f alone.
-  CMD=("${SQL_CLIENT_BIN}" embedded "${SSL_OPTS[@]}")
-  HIVE_CP=""
-  if [[ ${#HIVE_METASTORE_JARS[@]} -gt 0 ]]; then
-    for jar in "${HIVE_METASTORE_JARS[@]}"; do
-      if [[ ! -f "$jar" ]]; then
-        echo "ERROR: Hive jar not found: $jar" >&2
-        exit 1
-      fi
-      CMD+=(-j "$jar")
-      HIVE_CP="${HIVE_CP:+$HIVE_CP:}${jar}"
-    done
-    echo "Hive jars (${#HIVE_METASTORE_JARS[@]}): ${HIVE_METASTORE_JARS[*]}"
-  else
-    echo "ERROR: no CDH Hive jars found for Iceberg HiveCatalog." >&2
-    echo "  HIVE_HOME=${HIVE_HOME}" >&2
-    echo "  searched:" >&2
-    for dir in "${HIVE_JAR_SEARCH_DIRS[@]}"; do
-      echo "    - ${dir}" >&2
-    done
-    echo "  hint: ls /opt/cloudera/parcels/CDH/jars/hive-*.jar" >&2
-    echo "  or:  FLINK_SUBMIT_BACKEND=ssb $0 ..." >&2
-    exit 1
-  fi
-  if [[ -n "$HIVE_CP" ]]; then
-    export CLASSPATH="${HIVE_CP}${CLASSPATH:+:${CLASSPATH}}"
-    [[ -n "${HADOOP_CLASSPATH:-}" ]] && export CLASSPATH="${CLASSPATH}:${HADOOP_CLASSPATH}"
-  fi
+  CMD=("${SQL_CLIENT_BIN}" embedded "${FLINK_JVM_OPTS[@]}" "${SSL_OPTS[@]}")
+  echo "Hive catalog: flink-sql-connector-hive in lib/ (classloader.resolve-order=parent-first)"
+
   catalog_sql=""
   job_files=()
   for sql in "${SQL_ARGS[@]}"; do

@@ -161,8 +161,8 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## Step 4 — Catalog 설정 + Flink SQL Job 제출 (Flink SQL Client)
 
-> **jshin Edge Node — 제출 경로:** Iceberg Hive catalog는 **SSB 권장** (`cp .env.example .env`, `FLINK_SUBMIT_BACKEND=ssb`).  
-> sql-client embedded는 CSA에서 HMS classpath 불안정 (`NoSuchObjectException` / INSERT Calcite 충돌).
+> **jshin Edge Node (SSB 미설치):** sql-client + `flink-sql-connector-hive` in `$CSA_FLINK/lib/`.  
+> `./flink/run_*.sh` 가 `-Dclassloader.resolve-order=parent-first` 로 INSERT Calcite 충돌을 회피합니다.
 
 > **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.
 
@@ -306,8 +306,7 @@ cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
 # Iceberg: Flink 1.20용 (1.18 JAR는 교체 권장)
 find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'
 cp /path/to/iceberg-flink-runtime-1.20-*.jar $CSA_FLINK/lib/
-# Hive: lib/ 에 flink-sql-connector-hive 넣지 말 것 (Calcite 충돌). 아래 env 사용.
-rm -f $CSA_FLINK/lib/flink-sql-connector-hive-*.jar
+cp ~/flink-1.20.1/opt/flink-sql-connector-hive-*.jar $CSA_FLINK/lib/
 chown flink:flink $CSA_FLINK/lib/flink-sql-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
 
@@ -318,7 +317,7 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-*.jar $CSA_FLINK/lib/iceberg-flink-ru
 | `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
 | `iceberg-flink-runtime-1.20-*.jar` | `$CSA_FLINK/lib/iceberg-flink-runtime-*.jar` |
 
-> **Hive / HMS:** `flink-sql-connector-hive` 를 **`lib/`에 두면 INSERT 시 Calcite 충돌** (`NoSuchFieldError: operands`). CDH Hive client는 `HIVE_HOME` + `HADOOP_CLASSPATH` 로 제공.
+> **Hive / HMS:** `flink-sql-connector-hive` → **`lib/` 필수** (Iceberg HiveCatalog). INSERT Calcite 충돌은 submit 스크립트의 **parent-first** classloader로 회피.
 
 > **Iceberg catalog:** Flink 1.16+ embedded SQL Client는 `iceberg-flink-runtime` JAR가 **`lib/`** 에 있어야 `CREATE CATALOG ... type=iceberg` 가 동작합니다.  
 > parcel에 없으면 `find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'` 로 검색 후 복사하거나 Maven에서 내려받습니다.
@@ -364,7 +363,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 ./flink/run_ltas_5min.sh
 ```
 
-`FLINK_SUBMIT_BACKEND=auto`이면 `.env`의 `SSB_API_BASE` 우선 → SSB; 없으면 sql-client(bootstrap 시).
+`FLINK_SUBMIT_BACKEND=auto`이면 sql-client(bootstrap 시) 우선; SSB는 `SSB_API_BASE` 설정 + sql-client 미구성 시만.
 
 ---
 
@@ -379,9 +378,9 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | Catalog 오류 | `Could not find factory iceberg` | `iceberg-flink-runtime-1.20-*.jar` → `$CSA_FLINK/lib/` |
-| Catalog 오류 | `NoSuchObjectException` (embedded sql-client) | **SSB 사용** — `cp .env.example .env` 후 `./flink/run_*.sh` |
-| sql-client 시작 실패 | `JAR file does not exist '...hive-exec-*.jar'` | `git pull` — scripts resolve jars with `find` under `CDH/jars` |
-| INSERT 실패 | `NoSuchFieldError: operands` | `rm $CSA_FLINK/lib/flink-sql-connector-hive-*.jar` (use CDH `-j` jars instead) |
+| Catalog 오류 | `NoSuchObjectException` | `cp flink-sql-connector-hive-*.jar $CSA_FLINK/lib/` |
+| INSERT 실패 | `NoSuchFieldError: operands` | `git pull` — submit uses `-Dclassloader.resolve-order=parent-first` |
+| SSB connection refused | SSB 미설치 | `FLINK_SUBMIT_BACKEND=sql-client` (`.env`에서 `SSB_API_BASE` 비우기) |
 | Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_HOME` + `HIVE_CONF_DIR=${HIVE_HOME}/conf` (CDP: `.../CDH/lib/hive/conf`) |
 | Catalog 오류 | `hive-site.xml under /etc/hadoop/conf` | catalog `hive-conf-dir` → `/opt/cloudera/parcels/CDH/lib/hive/conf` (not hadoop conf) |
 | Job 미제출 | `-f` 두 파일 지정 | Flink는 **첫 `-f`만** 실행 — catalog는 `-i`, job은 `-f` (`./flink/run_ltas_5min.sh` 권장) |

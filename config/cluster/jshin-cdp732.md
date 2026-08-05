@@ -122,9 +122,8 @@ chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-# flink-sql-connector-hive 는 lib/ 에 넣지 않음 (INSERT Calcite 충돌)
-# HiveCatalog 클래스는 run_*.sh 가 CDH/jars 의 hive-metastore 등 실제 경로를 -j 로 전달
-rm -f $CSA_FLINK/lib/flink-sql-connector-hive-*.jar
+# Iceberg HiveCatalog — lib/ 에 hive connector 필요 (submit 스크립트가 parent-first Calcite 적용)
+cp ~/flink-1.20.1/opt/flink-sql-connector-hive-*.jar $CSA_FLINK/lib/
 chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
 
@@ -137,20 +136,7 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql
 
 확인: `/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help`
 
-### PoC 실행 순서 (SSB — **권장**, Iceberg Hive catalog)
-
-```
-cp .env.example .env   # SSB_API_BASE — 호스트명은 API Explorer 값으로 확인
-export HADOOP_CONF_DIR=/etc/hadoop/conf
-kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
-cd ~/KT_KDAP_Cloudera_PoC
-./flink/run_ltas_5min.sh
-```
-
-> sql-client embedded 모드는 CSA에서 Iceberg `HiveCatalog` classpath(HMS Thrift API)가 불안정합니다.  
-> `flink-sql-connector-hive`를 lib/에 두면 catalog는 되지만 INSERT Calcite 충돌. CDH `-j`만으로는 `NoSuchObjectException` 지속.
-
-### PoC 실행 순서 (sql-client — 실험용)
+### PoC 실행 순서 (sql-client — **기본**, SSB 미설치)
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -159,8 +145,12 @@ export HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive
 export HADOOP_CLASSPATH=$(hadoop classpath)
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd ~/KT_KDAP_Cloudera_PoC
-FLINK_SUBMIT_BACKEND=sql-client ./flink/run_ltas_5min.sh
+git pull
+./flink/run_ltas_5min.sh
 ```
+
+> `flink-sql-connector-hive` → `$CSA_FLINK/lib/` 필수.  
+> INSERT Calcite 충돌 방지: submit 스크립트가 `-Dclassloader.resolve-order=parent-first` 적용.
 
 직접 호출 (`-i` catalog, `-f` job — `-f` 두 번 쓰면 첫 파일만 실행됨):
 
@@ -171,7 +161,7 @@ FLINK_SUBMIT_BACKEND=sql-client ./flink/run_ltas_5min.sh
   -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
-**자동 선택 (`FLINK_SUBMIT_BACKEND=auto`):** `.env`에 `SSB_API_BASE` 있으면 SSB, 없으면 sql-client(bootstrap 시) → SSB 권장.
+**SSB:** 클러스터에 SQL Stream Builder 미설치 — `FLINK_SUBMIT_BACKEND=ssb` 사용 불가.
 
 ## SDV 데이터 생성 (Edge 노드)
 

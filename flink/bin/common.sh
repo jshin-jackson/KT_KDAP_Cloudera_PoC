@@ -22,6 +22,15 @@ SSL_OPTS=(
   -Djavax.net.ssl.trustStoreType=JKS
 )
 
+# Hive connector in lib/ bundles Calcite; parent-first keeps Flink's planner Calcite.
+FLINK_JVM_OPTS=(
+  -Dclassloader.resolve-order=parent-first
+)
+
+hive_connector_in_lib() {
+  compgen -G "${CSA_FLINK_LIB}/lib/flink-sql-connector-hive-"*.jar >/dev/null 2>&1
+}
+
 HIVE_METASTORE_API_CLASS="org/apache/hadoop/hive/metastore/api/NoSuchObjectException.class"
 
 load_repo_dotenv() {

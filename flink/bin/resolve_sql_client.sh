@@ -26,11 +26,9 @@ parcel_has_iceberg_jar() {
     || compgen -G "${flink_lib}/opt/iceberg-flink-runtime-"*.jar >/dev/null
 }
 
-parcel_has_hive_jar() {
-  # Intentionally unused for sql-client readiness: flink-sql-connector-hive in lib/
-  # bundles Calcite and breaks INSERT planning (NoSuchFieldError: operands).
-  # Iceberg Hive catalog uses CDH Hive client via HIVE_HOME / HADOOP_CLASSPATH.
-  return 1
+parcel_has_hive_connector_jar() {
+  local flink_lib="$1"
+  compgen -G "${flink_lib}/lib/flink-sql-connector-hive-"*.jar >/dev/null 2>&1
 }
 
 resolve_sql_client() {
@@ -84,7 +82,7 @@ sql_client_bootstrap_status() {
   if ! parcel_has_iceberg_jar "${flink_lib}"; then
     echo "missing: iceberg-flink-runtime jar in ${flink_lib}/lib/ (required for CREATE CATALOG iceberg)"
   fi
-  if compgen -G "${flink_lib}/lib/flink-sql-connector-hive-"*.jar >/dev/null 2>&1; then
-    echo "remove: flink-sql-connector-hive from ${flink_lib}/lib/ (Calcite conflict on INSERT — use HIVE_HOME + HADOOP_CLASSPATH)"
+  if ! parcel_has_hive_connector_jar "${flink_lib}"; then
+    echo "missing: flink-sql-connector-hive in ${flink_lib}/lib/ (Iceberg HiveCatalog + parent-first Calcite)"
   fi
 }

@@ -134,22 +134,21 @@ copy_iceberg_jar() {
 }
 
 copy_hive_connector_jar() {
-  # Do NOT install flink-sql-connector-hive into CSA lib/ — it bundles Calcite and
-  # breaks Flink 1.20 INSERT planning (NoSuchFieldError: operands). Iceberg Hive
-  # catalog uses CDH Hive client via HIVE_HOME + HADOOP_CLASSPATH instead.
-  echo "Skipping flink-sql-connector-hive (use HIVE_HOME + HADOOP_CLASSPATH, not lib/)"
-  return 0
-}
-
-remove_hive_connector_from_lib() {
   local dest_lib="$1"
-  local jar
+  local -a src=()
   shopt -s nullglob
-  for jar in "${dest_lib}"/flink-sql-connector-hive-*.jar; do
-    echo "Removing Calcite-conflicting jar: ${jar}"
-    rm -f "${jar}"
-  done
+  src=( "${APACHE_HOME}"/opt/flink-sql-connector-hive-*.jar )
   shopt -u nullglob
+  if [[ ${#src[@]} -gt 0 ]]; then
+    cp -f "${src[@]}" "${dest_lib}/"
+    echo "Copied hive connector: ${dest_lib}/$(basename "${src[0]}")"
+    echo "  sql-client uses -Dclassloader.resolve-order=parent-first (INSERT Calcite fix)"
+    return 0
+  fi
+  echo "WARN: flink-sql-connector-hive not in ${APACHE_HOME}/opt/" >&2
+  echo "  curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar" >&2
+  echo "  cp flink-sql-connector-hive-*.jar ${dest_lib}/" >&2
+  return 1
 }
 
 install_vendor() {
@@ -176,13 +175,14 @@ install_parcel() {
   cp -f "${APACHE_HOME}/opt/flink-sql-client-"*.jar "${dest_lib}/"
   cp -f "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar "${dest_lib}/"
   copy_iceberg_jar "${dest_lib}" || true
-  remove_hive_connector_from_lib "${dest_lib}"
+  copy_hive_connector_jar "${dest_lib}" || true
   chmod +x "${dest_bin}/sql-client.sh"
   if id flink &>/dev/null; then
     chown flink:flink "${dest_bin}/sql-client.sh" \
       "${dest_lib}/flink-sql-client-"*.jar \
       "${dest_lib}/flink-sql-gateway-"*.jar \
-      "${dest_lib}/iceberg-flink-runtime-"*.jar 2>/dev/null || true
+      "${dest_lib}/iceberg-flink-runtime-"*.jar \
+      "${dest_lib}/flink-sql-connector-hive-"*.jar 2>/dev/null || true
   fi
   echo "Installed into CSA parcel (jshin layout):"
   echo "  CSA_FLINK=${parcel_root}/lib/flink"
@@ -190,7 +190,8 @@ install_parcel() {
   ls -la "${dest_lib}/flink-sql-client-"*.jar "${dest_lib}/flink-sql-gateway-"*.jar 2>/dev/null || true
   ls -la "${dest_lib}/iceberg-flink-runtime-"*.jar 2>/dev/null \
     || echo "  (iceberg runtime missing — CREATE CATALOG iceberg may fail)"
-  echo "  Hive: use HIVE_HOME + HADOOP_CLASSPATH (do not add flink-sql-connector-hive to lib/)"
+  ls -la "${dest_lib}/flink-sql-connector-hive-"*.jar 2>/dev/null \
+    || echo "  (hive connector missing — Iceberg HiveCatalog will fail)"
   echo ""
   echo "Test:"
   echo "  /opt/cloudera/parcels/FLINK/bin/flink-sql-client --help"
