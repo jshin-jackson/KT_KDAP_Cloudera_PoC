@@ -69,16 +69,29 @@ if [[ "$BACKEND" == "sql-client" ]]; then
   fi
 
   cd "${REPO_ROOT}"
+  collect_hive_metastore_jars
   # Flink SQL Client accepts only ONE -f file; multiple -f flags ignore all but the first.
   # Catalog + job: -i (init) for catalog DDL, -f for job SQL. Catalog-only: -f alone.
   CMD=("${SQL_CLIENT_BIN}" embedded "${SSL_OPTS[@]}")
   if [[ ${#HIVE_METASTORE_JARS[@]} -gt 0 ]]; then
     for jar in "${HIVE_METASTORE_JARS[@]}"; do
+      if [[ ! -f "$jar" ]]; then
+        echo "ERROR: Hive jar not found: $jar" >&2
+        exit 1
+      fi
       CMD+=(-j "$jar")
     done
+    echo "Hive jars (${#HIVE_METASTORE_JARS[@]}): ${HIVE_METASTORE_JARS[*]}"
   else
-    echo "WARN: no CDH Hive jars under ${HIVE_HOME}/lib — Iceberg Hive catalog may fail" >&2
-    echo "      Set HIVE_HOME or use FLINK_SUBMIT_BACKEND=ssb" >&2
+    echo "ERROR: no CDH Hive jars found for Iceberg HiveCatalog." >&2
+    echo "  HIVE_HOME=${HIVE_HOME}" >&2
+    echo "  searched:" >&2
+    for dir in "${HIVE_JAR_SEARCH_DIRS[@]}"; do
+      echo "    - ${dir}" >&2
+    done
+    echo "  hint: ls /opt/cloudera/parcels/CDH/jars/hive-*.jar" >&2
+    echo "  or:  FLINK_SUBMIT_BACKEND=ssb $0 ..." >&2
+    exit 1
   fi
   catalog_sql=""
   job_files=()
