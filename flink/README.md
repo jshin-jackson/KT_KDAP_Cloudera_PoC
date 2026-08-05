@@ -159,10 +159,9 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## Step 4+5 — Flink YARN Session + SQL Job 제출
+## Step 4 — Catalog 설정 + Flink SQL Job 제출
 
-> **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.  
-> 각 SQL은 **`flink-yarn-session`으로 session을 띄운 뒤** SQL Client로 제출합니다.
+> **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.
 
 **사전:** `sql-client.sh` / `flink-sql-client*.jar`가 parcel에 없으면 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) 참고.
 
@@ -173,8 +172,6 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 ```
 
 ### 방법 A — Job별 실행 스크립트 (권장)
-
-스크립트가 Flink YARN session이 없으면 자동으로 `flink-yarn-session -d`를 실행한 뒤 SQL을 제출합니다.
 
 | Job | 스크립트 | SQL 파일 |
 |-----|----------|----------|
@@ -190,7 +187,7 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 ./flink/run_ltas_5min.sh
 ```
 
-**F-SGi-1 / F-SGi-2 / F-MDT (YARN session 유지, 스크립트만 추가 실행):**
+**F-SGi-1 / F-SGi-2 / F-MDT (추가 Job):**
 
 ```
 ./flink/run_sgi_5min_v1.sh
@@ -204,21 +201,7 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 ./flink/run_mdt_5min.sh
 ```
 
-### 방법 B — 수동 명령 (Job별)
-
-**1) YARN Session (1회, 또는 session 종료 후 재실행):**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
-```
-
-```
-yarn application -list | grep -i flink
-```
-
-YARN Application 이름은 기본값 **`Flink session cluster`** 입니다 (`-nm` 옵션 없음).
-
-**2) SQL Job 제출** — YARN session이 떠 있는 **같은 edge 노드**에서 실행 (`.yarn-properties` 필요):
+### 방법 B — 수동 명령 (flink-sql-client)
 
 **F-LTAS:**
 
@@ -292,7 +275,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## Job 중지 / 상태 확인
 
-**Flink job 목록 (YARN session 내):**
+**Flink job 목록:**
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink list
@@ -302,13 +285,6 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink cancel <JOB_ID>
-```
-
-**YARN session 종료:**
-
-```
-yarn application -list | grep -i flink
-yarn application -kill <application_id>
 ```
 
 또는 Cloudera Manager → Flink → **Web UI** → Running Jobs → Cancel
@@ -339,7 +315,6 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | SQL Client 실패 | `sql-client.sh` 없음 | 위 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) |
-| Job 제출 실패 | YARN session 없음 | `flink-yarn-session -d -s 2 -tm 2048` 재실행 |
 
 ---
 
@@ -352,7 +327,6 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 | 환경 설정 | [docs/runbooks/env-setup.md](../docs/runbooks/env-setup.md) |
 | SDV 대용량 데이터 | [sdv/README.md](../sdv/README.md) |
 | Catalog SQL | [flink/conf/00_catalog_setup_jshin.sql](conf/00_catalog_setup_jshin.sql) |
-| YARN session 시작 | [flink/bin/start_yarn_session.sh](bin/start_yarn_session.sh) |
 | SQL Job 제출 | [flink/bin/submit_flink_sql.sh](bin/submit_flink_sql.sh) |
 | Job 실행 스크립트 | `flink/run_*.sh` (ltas, sgi v1/v2, mdt, catalog) |
 | 테이블 DDL | [flink/cdp-test/impala_01_create_tables.sql](cdp-test/impala_01_create_tables.sql) |
@@ -365,7 +339,7 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 
 1. **Step 1~2** — 로그인 + 테이블 생성 (Impala만 사용, Flink 없음)
 2. **Step 3 방법 A** — 샘플 6건 넣기
-3. **Step 4+5 F-LTAS만** — `./flink/run_ltas_5min.sh` (YARN session + SQL)
+3. **Step 4 F-LTAS만** — `./flink/run_ltas_5min.sh`
 4. **Step 6** — 5분 후 결과 확인
 5. **Step 7** — 데이터 추가 후 결과 변화 관찰
 6. **F-SGi, F-MDT** — Job 3개 추가

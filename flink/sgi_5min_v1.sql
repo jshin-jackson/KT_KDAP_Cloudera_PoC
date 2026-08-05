@@ -5,8 +5,7 @@
 --   kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 --   ./flink/run_sgi_5min_v1.sh
 --
--- Manual (YARN session + SQL):
---   /opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
+-- Manual:
 --   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
 --     -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
 --     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \

@@ -75,7 +75,7 @@ python3.11 sdv/generate_flink_data.py --scale bts=5000 --scale sgi=1000000 --sca
 
 ---
 
-## 5. Flink YARN Session + Job 제출
+## 5. Flink SQL Job 제출
 
 **세션 초기화 (매 터미널):**
 
@@ -85,7 +85,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd /path/to/KT_KDAP_Cloudera_PoC
 ```
 
-### 방법 A — Job별 스크립트 (권장, YARN session 자동 시작)
+### 방법 A — Job별 스크립트 (권장)
 
 ```
 ./flink/run_ltas_5min.sh
@@ -103,17 +103,7 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 ./flink/run_mdt_5min.sh
 ```
 
-### 방법 B — 수동 (YARN session 1회 + SQL Client)
-
-**YARN Session (1회):**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
-```
-
-```
-yarn application -list | grep -i flink
-```
+### 방법 B — 수동 (flink-sql-client)
 
 **F-LTAS:**
 
@@ -121,7 +111,7 @@ yarn application -list | grep -i flink
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
-**F-SGi-1 / F-SGi-2 / F-MDT (session 유지, kinit 후 SQL만 추가):**
+**F-SGi-1 / F-SGi-2 / F-MDT (kinit 후 SQL 추가):**
 
 ```
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
@@ -149,7 +139,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## 7. Job / YARN Session 상태
+## 7. Job 상태
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink list
@@ -157,10 +147,6 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink cancel <JOB_ID>
-```
-
-```
-yarn application -kill <application_id>   # Flink YARN session 종료
 ```
 
 ---

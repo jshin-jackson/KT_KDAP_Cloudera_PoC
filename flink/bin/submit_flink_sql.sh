@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ensure YARN session, then submit Catalog + Flink SQL job file.
+# Submit Catalog + Flink SQL job file via flink-sql-client.
 #
 # Usage (from repo root):
 #   ./flink/bin/submit_flink_sql.sh flink/ltas_5min.sql
@@ -27,11 +27,6 @@ for arg in "$@"; do
     exit 1
   fi
 done
-
-if ! flink_yarn_session_running; then
-  echo "Flink YARN session not found — starting..."
-  "${SCRIPT_DIR}/start_yarn_session.sh"
-fi
 
 cd "${REPO_ROOT}"
 

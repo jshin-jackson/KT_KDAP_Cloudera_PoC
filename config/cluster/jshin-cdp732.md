@@ -106,7 +106,6 @@ jshin 확인 경로:
 | 항목 | 경로 |
 |------|------|
 | FLINK_HOME | `/opt/cloudera/parcels/FLINK` |
-| YARN Session | `/opt/cloudera/parcels/FLINK/bin/flink-yarn-session` |
 | SQL Client | `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` |
 | CLI | `/opt/cloudera/parcels/FLINK/bin/flink` |
 
@@ -115,18 +114,8 @@ jshin 확인 경로:
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
-/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
-yarn application -list | grep -i flink
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded ... -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
-
-| 옵션 | 의미 |
-|------|------|
-| `-d` | detached (백그라운드 YARN Application) |
-| `-s 2` | TaskManager slot 수 |
-| `-tm 2048` | TaskManager 메모리 (MB) |
-
-YARN Application 이름은 기본값 **`Flink session cluster`** (`grep -i flink`로 확인).
 
 **`flink-sql-client: sql-client.sh: No such file`** → Apache Flink 1.20.1에서 `sql-client.sh` + `opt/flink-sql-client*.jar`를 parcel에 복사.
 

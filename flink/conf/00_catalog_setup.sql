@@ -5,8 +5,7 @@
 -- Run (jshin, repo root):
 --   ./flink/run_catalog_setup.sh
 --
--- Manual (YARN session + SQL):
---   /opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
+-- Manual:
 --   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
 --     -Djavax.net.ssl.trustStore=... -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
 --     -f flink/conf/00_catalog_setup.sql
