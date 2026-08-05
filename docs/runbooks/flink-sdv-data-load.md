@@ -51,27 +51,7 @@ hdfs dfs -ls hdfs://ns1/user/kdap/staging/sdv/
 
 ---
 
-## 3. Impala — Parquet → Iceberg (PARQUET_FILE 지원 시)
-
-```
-impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "INSERT OVERWRITE kdap.bts_master SELECT cell_id, alt_cell_id, bts_alt_key, bts_market_nm, region_cd FROM PARQUET_FILE('hdfs://ns1/user/kdap/staging/sdv/bts_master.parquet')"
-```
-
-```
-impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "INSERT INTO kdap.cdr_sgi_raw (sgi_id, cell_id, alt_cell_id, rqt_st_dt, etl_date, val, use_flag, signal_type, event_time) SELECT sgi_id, cell_id, alt_cell_id, rqt_st_dt, etl_date, CAST(val AS BIGINT), use_flag, signal_type, CAST(event_time AS TIMESTAMP) FROM PARQUET_FILE('hdfs://ns1/user/kdap/staging/sdv/cdr_sgi_raw.parquet')"
-```
-
-```
-impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "INSERT INTO kdap.cdr_mdt_smsng_raw (mdt_id, gnss_utmkx, gnss_utmky, rqt_st_dt, bts_market_nm, event_time) SELECT mdt_id, gnss_utmkx, gnss_utmky, rqt_st_dt, bts_market_nm, CAST(event_time AS TIMESTAMP) FROM PARQUET_FILE('hdfs://ns1/user/kdap/staging/sdv/cdr_mdt_smsng_raw.parquet')"
-```
-
-```
-impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "REFRESH kdap.bts_master; REFRESH kdap.cdr_sgi_raw; REFRESH kdap.cdr_mdt_smsng_raw; COMPUTE STATS kdap.bts_master; COMPUTE STATS kdap.cdr_sgi_raw; COMPUTE STATS kdap.cdr_mdt_smsng_raw"
-```
-
----
-
-## 4. Spark — Parquet → Iceberg (권장, PARQUET_FILE 미지원 시)
+## 3. Spark — Parquet → Iceberg (권장)
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -108,9 +88,15 @@ spark.read.parquet("hdfs://ns1/user/kdap/staging/sdv/cdr_sgi_raw.parquet").write
 spark.read.parquet("hdfs://ns1/user/kdap/staging/sdv/cdr_mdt_smsng_raw.parquet").writeTo("iceberg.kdap.cdr_mdt_smsng_raw").append()
 ```
 
+Impala 메타데이터 갱신:
+
+```
+impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "REFRESH kdap.bts_master; REFRESH kdap.cdr_sgi_raw; REFRESH kdap.cdr_mdt_smsng_raw; COMPUTE STATS kdap.bts_master; COMPUTE STATS kdap.cdr_sgi_raw; COMPUTE STATS kdap.cdr_mdt_smsng_raw"
+```
+
 ---
 
-## 5. 적재 검증
+## 4. 적재 검증
 
 ```
 impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -q "SELECT COUNT(*) AS sgi_cnt FROM kdap.cdr_sgi_raw"
@@ -126,7 +112,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## 6. Flink Job 실행
+## 5. Flink Job 실행
 
 ```
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
