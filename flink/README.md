@@ -161,7 +161,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## Step 4 — Catalog 설정 + Flink SQL Job 제출 (Flink SQL Client)
 
-> **jshin Edge Node:** Apache Flink 1.20.1에서 `sql-client.sh`와 `flink-sql-client-*.jar`를 CSA parcel에 복사해 두었습니다.  
+> **jshin Edge Node:** Apache Flink 1.20.1에서 `sql-client.sh`, `flink-sql-client-*.jar`, **`flink-sql-gateway-*.jar`** 를 CSA parcel에 복사해 두었습니다.  
 > `FLINK_SUBMIT_BACKEND=sql-client`(`.env` 기본값)로 `./flink/run_*.sh` 실행 시 `flink-sql-client embedded -f ...` 로 제출됩니다.
 
 > **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.
@@ -291,7 +291,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## Flink SQL Client — CSA parcel 보완 (jshin Edge Node 적용 완료)
 
-CSA parcel에는 `lib/flink/bin/sql-client.sh`와 `flink-sql-client*.jar`가 **기본 포함되지 않습니다**.  
+CSA parcel에는 `lib/flink/bin/sql-client.sh`, `flink-sql-client*.jar`, **`flink-sql-gateway*.jar`** 가 **기본 포함되지 않습니다**.  
 Apache Flink **1.20.1** (CSA와 동일 버전)에서 아래 파일을 복사합니다.
 
 ### jshin Edge Node — 수동 복사 (적용 완료)
@@ -302,13 +302,15 @@ cp ~/flink-1.20.1/bin/sql-client.sh $CSA_FLINK/bin/
 chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
-chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar
+cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
+chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar
 ```
 
 | Apache Flink 원본 | parcel 대상 |
 |-------------------|-------------|
 | `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
 | `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
+| `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
 
 확인:
 
@@ -341,6 +343,7 @@ sudo ./scripts/bootstrap_flink_sql_client.sh ~/flink-1.20.1 --target parcel
 |--------------|-------------|
 | `bin/sql-client.sh` | `flink/vendor/apache-flink-1.20.1/bin/` |
 | `opt/flink-sql-client-*.jar` | `flink/vendor/apache-flink-1.20.1/opt/` |
+| `opt/flink-sql-gateway-*.jar` | `flink/vendor/apache-flink-1.20.1/opt/` |
 
 ### SQL Job 실행
 
@@ -364,6 +367,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | 결과 0건 | 윈도우 미완료 | 5~6분 더 대기 |
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
+| SQL Client 실패 | gateway JAR 누락 (`DefaultContext`) | `flink-sql-gateway-*.jar` 도 `$CSA_FLINK/lib/`에 복사 |
 | SQL Client 실패 | parcel bootstrap 미적용 | jshin 수동 복사 또는 `bootstrap_flink_sql_client.sh --target parcel` |
 | SQL Client 실패 | Kerberos / SSL | `kinit` 재실행, trustStore JVM 옵션 확인 |
 | SSB 401/403 | Kerberos 만료 / project | `kinit` 재실행, `SSB_PROJECT_ID` 확인 (`FLINK_SUBMIT_BACKEND=ssb`) |

@@ -54,7 +54,9 @@ fi
 if [[ "$BACKEND" == "sql-client" ]]; then
   if ! sql_client_ready; then
     echo "ERROR: sql-client not available." >&2
-    echo "  Bootstrap: cp flink-1.20.1/bin/sql-client.sh \$CSA_FLINK/bin/ && cp flink-1.20.1/opt/flink-sql-client-*.jar \$CSA_FLINK/lib/" >&2
+    echo "  Bootstrap: cp flink-1.20.1/bin/sql-client.sh \$CSA_FLINK/bin/" >&2
+    echo "             cp flink-1.20.1/opt/flink-sql-client-*.jar \$CSA_FLINK/lib/" >&2
+    echo "             cp flink-1.20.1/opt/flink-sql-gateway-*.jar \$CSA_FLINK/lib/" >&2
     echo "  Or script: ./scripts/bootstrap_flink_sql_client.sh /path/to/flink-${FLINK_VERSION:-1.20.1} --target parcel" >&2
     echo "  Or use SSB:  FLINK_SUBMIT_BACKEND=ssb $0 ..." >&2
     exit 1

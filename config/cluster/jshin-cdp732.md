@@ -121,13 +121,15 @@ cp ~/flink-1.20.1/bin/sql-client.sh $CSA_FLINK/bin/
 chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
-chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar
+cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
+chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar
 ```
 
 | Apache Flink 원본 | parcel 대상 |
 |-------------------|-------------|
 | `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
 | `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
+| `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
 
 확인: `/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help`
 

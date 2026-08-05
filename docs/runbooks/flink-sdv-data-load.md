@@ -170,8 +170,8 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
   -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
-> jshin Edge Node: Apache Flink 1.20.1에서 `sql-client.sh` → `lib/flink/bin/`, `flink-sql-client-*.jar` → `lib/flink/lib/` 복사 완료.  
-> SSB 대안: `FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh`
+> jshin Edge Node: Apache Flink 1.20.1에서 `sql-client.sh` → `lib/flink/bin/`, `flink-sql-client-*.jar` + `flink-sql-gateway-*.jar` → `lib/flink/lib/` 복사.  
+> `NoClassDefFoundError: DefaultContext` → gateway JAR 누락. SSB 대안: `FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh`
 
 ---
 

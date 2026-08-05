@@ -7,7 +7,8 @@
 #   chmod +x $CSA_FLINK/bin/sql-client.sh
 #   chown flink:flink $CSA_FLINK/bin/sql-client.sh
 #   cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
-#   chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar
+#   cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
+#   chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar
 #
 # Or use this script:
 #   ./scripts/bootstrap_flink_sql_client.sh ~/flink-1.20.1 --target parcel
@@ -71,15 +72,14 @@ require_file() {
 
 require_file "${APACHE_HOME}/bin/sql-client.sh"
 require_file "${APACHE_HOME}/opt/flink-sql-client-"*.jar
+require_file "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar
 
 install_vendor() {
   local dest="${REPO_ROOT}/flink/vendor/apache-flink-${FLINK_VERSION}"
   mkdir -p "${dest}/bin" "${dest}/opt"
   cp -f "${APACHE_HOME}/bin/sql-client.sh" "${dest}/bin/"
   cp -f "${APACHE_HOME}/opt/flink-sql-client-"*.jar "${dest}/opt/"
-  if compgen -G "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar >/dev/null; then
-    cp -f "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar "${dest}/opt/"
-  fi
+  cp -f "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar "${dest}/opt/"
   chmod +x "${dest}/bin/sql-client.sh"
   echo "Installed vendor SQL Client:"
   echo "  ${dest}/bin/sql-client.sh"
@@ -94,14 +94,17 @@ install_parcel() {
   mkdir -p "${dest_bin}" "${dest_lib}"
   cp -f "${APACHE_HOME}/bin/sql-client.sh" "${dest_bin}/"
   cp -f "${APACHE_HOME}/opt/flink-sql-client-"*.jar "${dest_lib}/"
+  cp -f "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar "${dest_lib}/"
   chmod +x "${dest_bin}/sql-client.sh"
   if id flink &>/dev/null; then
-    chown flink:flink "${dest_bin}/sql-client.sh" "${dest_lib}/flink-sql-client-"*.jar 2>/dev/null || true
+    chown flink:flink "${dest_bin}/sql-client.sh" \
+      "${dest_lib}/flink-sql-client-"*.jar \
+      "${dest_lib}/flink-sql-gateway-"*.jar 2>/dev/null || true
   fi
   echo "Installed into CSA parcel (jshin layout):"
   echo "  CSA_FLINK=${parcel_root}/lib/flink"
   echo "  ${dest_bin}/sql-client.sh"
-  ls -la "${dest_lib}/flink-sql-client-"*.jar
+  ls -la "${dest_lib}/flink-sql-client-"*.jar "${dest_lib}/flink-sql-gateway-"*.jar
   echo ""
   echo "Test:"
   echo "  /opt/cloudera/parcels/FLINK/bin/flink-sql-client --help"

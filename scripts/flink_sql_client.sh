@@ -23,6 +23,7 @@ print_troubleshoot() {
   echo "  CSA_FLINK=/opt/cloudera/parcels/FLINK/lib/flink" >&2
   echo "  cp ~/flink-${FLINK_VERSION:-1.20.1}/bin/sql-client.sh \$CSA_FLINK/bin/" >&2
   echo "  cp ~/flink-${FLINK_VERSION:-1.20.1}/opt/flink-sql-client-*.jar \$CSA_FLINK/lib/" >&2
+  echo "  cp ~/flink-${FLINK_VERSION:-1.20.1}/opt/flink-sql-gateway-*.jar \$CSA_FLINK/lib/" >&2
   echo "  Or: ./scripts/bootstrap_flink_sql_client.sh flink-${FLINK_VERSION:-1.20.1} --target parcel" >&2
   echo "" >&2
   echo "Or use SSB REST API:" >&2

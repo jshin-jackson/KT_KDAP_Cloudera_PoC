@@ -77,8 +77,8 @@ python3.11 sdv/generate_flink_data.py --scale bts=5000 --scale sgi=1000000 --sca
 
 ## 5. Flink SQL Job 제출 (Flink SQL Client)
 
-**사전:** jshin Edge Node에 Apache Flink 1.20.1 SQL Client가 CSA parcel에 복사되어 있음  
-(`lib/flink/bin/sql-client.sh` + `lib/flink/lib/flink-sql-client-*.jar`)
+**사전:** jshin Edge Node에 Apache Flink 1.20.1 SQL Client + Gateway JAR가 CSA parcel에 복사되어 있음  
+(`lib/flink/bin/sql-client.sh` + `lib/flink/lib/flink-sql-client-*.jar` + `lib/flink/lib/flink-sql-gateway-*.jar`)
 
 **세션 초기화 (매 터미널):**
 

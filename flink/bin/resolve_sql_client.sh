@@ -7,8 +7,17 @@ SQL_CLIENT_SOURCE=""
 
 parcel_has_sql_client_jar() {
   local flink_lib="$1"
-  compgen -G "${flink_lib}/lib/flink-sql-client-"*.jar >/dev/null \
-    || compgen -G "${flink_lib}/opt/flink-sql-client-"*.jar >/dev/null
+  local has_client=false has_gateway=false
+
+  if compgen -G "${flink_lib}/lib/flink-sql-client-"*.jar >/dev/null \
+    || compgen -G "${flink_lib}/opt/flink-sql-client-"*.jar >/dev/null; then
+    has_client=true
+  fi
+  if compgen -G "${flink_lib}/lib/flink-sql-gateway-"*.jar >/dev/null \
+    || compgen -G "${flink_lib}/opt/flink-sql-gateway-"*.jar >/dev/null; then
+    has_gateway=true
+  fi
+  [[ "$has_client" == true && "$has_gateway" == true ]]
 }
 
 resolve_sql_client() {
@@ -24,7 +33,8 @@ resolve_sql_client() {
   fi
 
   if [[ -x "${vendor_home}/bin/sql-client.sh" ]] \
-    && compgen -G "${vendor_home}/opt/flink-sql-client-"*.jar >/dev/null; then
+    && compgen -G "${vendor_home}/opt/flink-sql-client-"*.jar >/dev/null \
+    && compgen -G "${vendor_home}/opt/flink-sql-gateway-"*.jar >/dev/null; then
     SQL_CLIENT_BIN="${vendor_home}/bin/sql-client.sh"
     SQL_CLIENT_SOURCE="apache-vendor"
     export FLINK_OPT_DIR="${vendor_home}/opt"

@@ -69,7 +69,7 @@ spark-submit sdv/load_sdv_to_iceberg.py
 
 ## 7. Flink TLS + SQL Client
 
-jshin Edge Node: Apache Flink 1.20.1 SQL Client가 CSA parcel에 복사됨 (`lib/flink/bin/sql-client.sh`, `lib/flink/lib/flink-sql-client-*.jar`).
+jshin Edge Node: Apache Flink 1.20.1 SQL Client가 CSA parcel에 복사됨 (`lib/flink/bin/sql-client.sh`, `lib/flink/lib/flink-sql-client-*.jar`, `lib/flink/lib/flink-sql-gateway-*.jar`).
 
 **권장 (repo wrapper):**
 
