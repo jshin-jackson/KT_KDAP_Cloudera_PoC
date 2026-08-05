@@ -17,9 +17,8 @@ FLINK_JOBS=(
 
 for job in "${FLINK_JOBS[@]}"; do
   log "Submit Flink job: ${job}"
-  # sql-client.sh or SSB API — adjust for environment
-  # flink run -d ... "${REPO_ROOT}/${job}" &
-  echo "flink_job_pending:${job}" >> "${RUN_DIR}/summary.csv"
+  "${REPO_ROOT}/flink/bin/submit_flink_sql.sh" "${job}" || true
+  echo "flink_job_submitted:${job}" >> "${RUN_DIR}/summary.csv"
 done
 
 # Concurrent batch on Base (Scenario 1)

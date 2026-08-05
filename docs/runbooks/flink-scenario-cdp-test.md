@@ -38,7 +38,8 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+cp .env.example .env
+./flink/run_ltas_5min.sh
 ```
 
 ---
@@ -66,7 +67,7 @@ Cloudera Manager 웹 UI에서 아래 서비스가 **Started / Green** 인지 확
 - Hive Metastore (HMS)
 - Impala
 - **Flink** (또는 Flink on YARN)
-- **SQL Stream Builder (SSB)** — 선택 (UI로도 제출 가능)
+- **SQL Stream Builder (SSB)** — Flink SQL 제출 (REST API / Web UI)
 
 Flink Gateway 노드 호스트명을 메모합니다. (예: `flink-gateway.example.com`)
 
@@ -148,64 +149,62 @@ impala-shell -k -q "SELECT COUNT(*) FROM kdap.bts_master"
 
 ---
 
-## 5. Flink SQL Client 접속
-
-Flink Gateway 노드에서 SQL Client 실행:
+## 5. SSB 설정
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded
+cp .env.example .env
 ```
 
-> Parcel 경로: jshin → `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` (`sql-client.sh` / `lib/flink/bin` 아님)
+SSB Web UI → **API Explorer**에서 Base URL을 복사해 `.env`의 `SSB_API_BASE`에 설정합니다.
+
+```
+python3.11 scripts/ssb_submit_sql.py --list-projects
+```
 
 ---
 
 ## 6. Flink — Iceberg Catalog 설정
 
-**jshin 클러스터**는 `flink/conf/00_catalog_setup_jshin.sql` 사용 (HMS HA: `ccycloud-1` + `ccycloud-3`:9083, Impala는 `ccycloud-5`).
+Catalog SQL은 Job 제출 시 자동으로 선행 실행됩니다 (`scripts/ssb_submit_sql.py`).
 
-**방법 A — 파일 적용 (권장, jshin + TLS)**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql
-```
-
-**방법 B — 일반 클러스터**
-
-`flink/conf/00_catalog_setup.sql` 에서 `<HMS_HOST>` 수정 후:
+Catalog만 단독 실행:
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql
+./flink/run_catalog_setup.sh
 ```
 
 ---
 
 ## 7. Flink Job 제출 — 시나리오별 명령
 
-각 Job은 **별도 터미널**에서 SQL Client를 띄우거나, `-f` 옵션으로 파일 제출합니다.
-
-### 7-1. F-LTAS (LTAS 5분 집계) — jshin
+### 7-1. F-LTAS (LTAS 5분 집계)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+./flink/run_ltas_5min.sh
 ```
 
 ### 7-2. F-SGi-1 (SGi 5분 집계 v1)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -i flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v1.sql
+./flink/run_sgi_5min_v1.sh
 ```
 
-### 7-3. F-SGi-2 (SGi 5분 집계 v2)
+### 7-3. F-SGi-2 (SGi 5min 집계 v2)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -i flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v2.sql
+./flink/run_sgi_5min_v2.sh
 ```
 
 ### 7-4. F-MDT (MDT 5분 집계)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -i flink/conf/00_catalog_setup.sql -f flink/mdt_5min.sql
+./flink/run_mdt_5min.sh
+```
+
+직접 호출:
+
+```
+python3.11 scripts/ssb_submit_sql.py flink/ltas_5min.sql
 ```
 
 > Job이 `RUNNING` 상태로 유지되면 정상입니다. INSERT INTO streaming job 은 종료하지 않습니다.
@@ -310,13 +309,13 @@ Flink Web UI → Job 선택 → **Cancel**
 
 ---
 
-## 12. SQL Stream Builder (SSB) 로 제출 — UI 대안
+## 12. SQL Stream Builder (SSB) Web UI
 
-명령어 대신 UI를 선호하면:
+REST API 대신 UI를 선호하면:
 
 1. CM → SQL Stream Builder → **Open**
 2. Project 생성: `kdap-poc-flink`
-3. `flink/conf/00_catalog_setup.sql` 내용 붙여넣기 → Execute
+3. `flink/conf/00_catalog_setup_jshin.sql` 내용 붙여넣기 → Execute
 4. `flink/ltas_5min.sql` (또는 sgi/mdt) 붙여넣기 → **Deploy**
 5. SSB Dashboard에서 Running / Checkpoint 상태 확인
 
@@ -341,7 +340,7 @@ Flink Web UI → Job 선택 → **Cancel**
 
 1. `flink/cdp-test/` 대신 실제 데이터 경로로 `cdr_sgi_raw`, `cdr_mdt_smsng_raw` 적재
 2. `flink/conf/00_catalog_setup.sql` 의 `<HMS_HOST>` 를 KT 클러스터 HMS 로 변경
-3. 동일 Flink SQL 파일(`flink/ltas_5min.sql` 등) 그대로 `-f` 로 제출
+3. 동일 Flink SQL 파일(`flink/ltas_5min.sql` 등)을 `./flink/run_*.sh` 또는 SSB로 제출
 4. 배치 결과(`sum_ltas_cdr_tm` 등)와 Flink sink 건수 비교
 
 배치 대비 비교 쿼리:

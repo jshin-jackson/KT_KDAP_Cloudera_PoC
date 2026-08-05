@@ -1,8 +1,8 @@
 #!/usr/bin/env python3.11
 """Submit Flink SQL files via Cloudera SQL Stream Builder (SSB) REST API.
 
-CSA clusters often ship without a working flink-sql-client. SSB exposes the same
-execution path as the Web UI through POST /sql/execute.
+SSB exposes the same execution path as the Web UI through POST /sql/execute.
+All `./flink/run_*.sh` scripts delegate here.
 
 Usage (repo root, after kinit):
   python3.11 scripts/ssb_submit_sql.py flink/ltas_5min.sql

@@ -75,10 +75,9 @@ python3.11 sdv/generate_flink_data.py --scale bts=5000 --scale sgi=1000000 --sca
 
 ---
 
-## 5. Flink SQL Job 제출 (Flink SQL Client)
+## 5. Flink SQL Job 제출 (SSB REST API)
 
-**사전:** jshin Edge Node에 Apache Flink 1.20.1 SQL Client + Gateway JAR가 CSA parcel에 복사되어 있음  
-(`lib/flink/bin/sql-client.sh` + `lib/flink/lib/flink-sql-client-*.jar` + `lib/flink/lib/flink-sql-gateway-*.jar`)
+**사전:** `cp .env.example .env` 후 SSB Web UI → API Explorer에서 `SSB_API_BASE` 설정
 
 **세션 초기화 (매 터미널):**
 
@@ -88,43 +87,20 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd /path/to/KT_KDAP_Cloudera_PoC
 ```
 
-### 방법 A — Job별 스크립트 (권장)
+### Job별 스크립트 (권장)
 
 ```
 ./flink/run_ltas_5min.sh
-```
-
-```
 ./flink/run_sgi_5min_v1.sh
-```
-
-```
 ./flink/run_sgi_5min_v2.sh
-```
-
-```
 ./flink/run_mdt_5min.sh
 ```
 
-### 방법 B — flink-sql-client 직접
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
-  -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
-  -Djavax.net.ssl.trustStorePassword=changeit \
-  -Djavax.net.ssl.trustStoreType=JKS \
-  -i flink/conf/00_catalog_setup_jshin.sql \
-  -f flink/ltas_5min.sql
-```
-
-### 방법 C — SSB REST API (대안)
-
-```
-FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh
-```
+### 직접 호출
 
 ```
 python3.11 scripts/ssb_submit_sql.py flink/ltas_5min.sql
+python3.11 scripts/ssb_submit_sql.py --list-projects
 python3.11 scripts/ssb_submit_sql.py --list-jobs
 ```
 

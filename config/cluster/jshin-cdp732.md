@@ -101,67 +101,32 @@ Iceberg `spark.sql.extensions` 등은 Session 시작 전 `--conf`로만 설정 �
 
 ## Flink (CDP 7.3.2 / 1.20.1 / CSA)
 
-jshin 확인 경로:
-
 | 항목 | 경로 |
 |------|------|
 | FLINK_HOME | `/opt/cloudera/parcels/FLINK` |
-| CSA_FLINK (lib/flink) | `/opt/cloudera/parcels/FLINK/lib/flink` |
-| flink-sql-client | `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` |
+| Flink CLI | `/opt/cloudera/parcels/FLINK/bin/flink` |
 | SSB Web UI | CM → SQL Stream Builder (port **8082**) |
 | SSB REST API | SSB UI → **API Explorer** → Base URL |
 
-### CSA SQL Client bootstrap (jshin Edge Node — 적용 완료)
-
-CSA parcel에 Apache Flink 1.20.1 SQL Client 파일 복사:
+### PoC 실행 순서 (SSB REST API)
 
 ```
-CSA_FLINK=/opt/cloudera/parcels/FLINK-1.20.1-csa1.17.1.0-81475796/lib/flink
-cp ~/flink-1.20.1/bin/sql-client.sh $CSA_FLINK/bin/
-chmod +x $CSA_FLINK/bin/sql-client.sh
-chown flink:flink $CSA_FLINK/bin/sql-client.sh
-cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
-cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-# Iceberg HiveCatalog — lib/ 에 hive connector 필요 (submit 스크립트가 parent-first Calcite 적용)
-cp ~/flink-1.20.1/opt/flink-sql-connector-hive-*.jar $CSA_FLINK/lib/
-chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
-```
-
-| Apache Flink 원본 | parcel 대상 |
-|-------------------|-------------|
-| `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
-| `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
-| `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
-| `iceberg-flink-runtime-1.20-*.jar` | `$CSA_FLINK/lib/iceberg-flink-runtime-*.jar` |
-
-확인: `/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help`
-
-### PoC 실행 순서 (sql-client — **기본**, SSB 미설치)
-
-```
+cp .env.example .env   # SSB_API_BASE — API Explorer 값으로 확인
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-export HIVE_CONF_DIR=/opt/cloudera/parcels/CDH/lib/hive/conf
-export HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive
-export HADOOP_CLASSPATH=$(hadoop classpath)
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd ~/KT_KDAP_Cloudera_PoC
-git pull
 ./flink/run_ltas_5min.sh
 ```
 
-> `flink-sql-connector-hive` → `$CSA_FLINK/lib/` 필수.  
-> INSERT Calcite 충돌 방지: submit 스크립트가 `-Dclassloader.resolve-order=parent-first` 적용.
-
-직접 호출 (`-i` catalog, `-f` job — `-f` 두 번 쓰면 첫 파일만 실행됨):
+직접 호출:
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
-  -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
-  -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
-  -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+python3.11 scripts/ssb_submit_sql.py flink/ltas_5min.sql
+python3.11 scripts/ssb_submit_sql.py --list-projects
+python3.11 scripts/ssb_submit_sql.py --list-jobs
 ```
 
-**SSB:** 클러스터에 SQL Stream Builder 미설치 — `FLINK_SUBMIT_BACKEND=ssb` 사용 불가.
+Job 상태: SSB Web UI → Jobs, 또는 `/opt/cloudera/parcels/FLINK/bin/flink list`
 
 ## SDV 데이터 생성 (Edge 노드)
 
