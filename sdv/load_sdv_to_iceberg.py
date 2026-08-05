@@ -3,13 +3,13 @@
 
 Run on CDP edge (after kinit + HADOOP_CONF_DIR):
 
-  pyspark3 --driver-memory 4g --executor-memory 8g --num-executors 4 \\
+  spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 \\
     sdv/load_sdv_to_iceberg.py
 
-Or:
+Interactive debugging only (do not pass a .py file to pyspark):
 
-  spark3-submit --driver-memory 4g --executor-memory 8g --num-executors 4 \\
-    sdv/load_sdv_to_iceberg.py
+  export HADOOP_CONF_DIR=/etc/hadoop/conf
+  pyspark --driver-memory 4g --executor-memory 8g --num-executors 4
 """
 
 from __future__ import annotations

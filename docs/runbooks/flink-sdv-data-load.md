@@ -53,16 +53,22 @@ hdfs dfs -ls hdfs://ns1/user/kdap/staging/sdv/
 
 ## 3. PySpark — Parquet → Iceberg (권장)
 
-> **참고:** `-k`는 Impala 전용입니다. **0단계 `kinit` 이후** `pyspark3`로 실행하세요.
+> **참고:** `-k`는 Impala 전용입니다. PySpark **스크립트는 `spark-submit`**, 대화형은 **`pyspark`** (jshin 클러스터 확인됨).  
+> `HADOOP_CONF_DIR` 미설정 시 standby NameNode WARN이 날 수 있습니다 — **0단계를 먼저** 실행하세요.
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-pyspark3 --driver-memory 4g --executor-memory 8g --num-executors 4 sdv/load_sdv_to_iceberg.py
+spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 sdv/load_sdv_to_iceberg.py
 ```
 
 스크립트: [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)
 
-대화형으로 실행하려면 `pyspark3`만 실행한 뒤 아래를 붙여넣습니다:
+대화형으로 실행하려면 `pyspark` 실행 후 아래를 붙여넣습니다:
+
+```
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+pyspark --driver-memory 4g --executor-memory 8g --num-executors 4
+```
 
 ```python
 staging = "hdfs://ns1/user/kdap/staging/sdv"

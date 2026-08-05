@@ -83,11 +83,12 @@ Flink catalog SQL: [flink/conf/00_catalog_setup_jshin.sql](../../flink/conf/00_c
 
 ## PySpark (Parquet → Iceberg 적재)
 
-`kinit` 후 실행 (`-k`는 Impala 전용):
+| 용도 | 명령 |
+|------|------|
+| 스크립트 일괄 적재 | `spark-submit sdv/load_sdv_to_iceberg.py` |
+| 대화형 (jshin 확인됨) | `pyspark` |
 
-```
-pyspark3 sdv/load_sdv_to_iceberg.py
-```
+사전: `export HADOOP_CONF_DIR=/etc/hadoop/conf` + `kinit`
 
 Iceberg 설정은 [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)에 포함되어 있습니다.
 

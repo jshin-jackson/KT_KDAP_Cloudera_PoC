@@ -57,18 +57,14 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## 6. PySpark Iceberg (선택 — SDV Parquet 적재)
 
-> **참고:** `-k`는 Impala 전용입니다. **3단계 `kinit` 이후** `pyspark3`로 실행하세요.
+> **참고:** `-k`는 Impala 전용입니다. **3단계 `kinit` + `HADOOP_CONF_DIR` 이후** 실행하세요.
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-pyspark3 sdv/load_sdv_to_iceberg.py
+spark-submit sdv/load_sdv_to_iceberg.py
 ```
 
-대화형 확인:
-
-```python
-spark.sql("SHOW TABLES IN kdap").show()
-```
+대화형: `pyspark` → `spark.sql("SHOW TABLES IN kdap").show()`
 
 ## 7. Flink TLS
 
