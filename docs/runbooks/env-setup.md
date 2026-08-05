@@ -57,7 +57,8 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## 6. PySpark Iceberg (선택 — SDV Parquet 적재)
 
-> **참고:** `-k`는 Impala 전용입니다. **3단계 `kinit` + `HADOOP_CONF_DIR` 이후** 실행하세요.
+> **참고:** `-k`는 Impala 전용입니다. **3단계 `kinit` + `HADOOP_CONF_DIR` 이후** 실행하세요.  
+> 대화형 `pyspark`는 Iceberg `--conf`를 시작 시 넘겨야 합니다 ([flink-sdv-data-load.md](flink-sdv-data-load.md) 3단계).
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf

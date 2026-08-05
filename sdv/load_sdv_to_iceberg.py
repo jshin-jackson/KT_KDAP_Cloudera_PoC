@@ -6,10 +6,14 @@ Run on CDP edge (after kinit + HADOOP_CONF_DIR):
   spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 \\
     sdv/load_sdv_to_iceberg.py
 
-Interactive debugging only (do not pass a .py file to pyspark):
+Interactive debugging — Iceberg configs must be set at startup (not via spark.conf.set):
 
   export HADOOP_CONF_DIR=/etc/hadoop/conf
-  pyspark --driver-memory 4g --executor-memory 8g --num-executors 4
+  pyspark --driver-memory 4g --executor-memory 8g --num-executors 4 \\
+    --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \\
+    --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkCatalog \\
+    --conf spark.sql.catalog.spark_catalog.type=hive \\
+    --conf spark.hadoop.fs.defaultFS=hdfs://ns1
 """
 
 from __future__ import annotations
@@ -18,14 +22,18 @@ import argparse
 
 from pyspark.sql import SparkSession
 
+ICEBERG_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+ICEBERG_CATALOG = "org.apache.iceberg.spark.SparkCatalog"
 
-def configure_iceberg(spark: SparkSession, default_fs: str) -> None:
-    spark.conf.set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkCatalog")
-    spark.conf.set("spark.sql.catalog.spark_catalog.type", "hive")
-    spark.conf.set("spark.hadoop.fs.defaultFS", default_fs)
-    spark.conf.set(
-        "spark.sql.extensions",
-        "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+
+def create_spark(default_fs: str) -> SparkSession:
+    return (
+        SparkSession.builder.appName("sdv-load-iceberg")
+        .config("spark.sql.extensions", ICEBERG_EXTENSIONS)
+        .config("spark.sql.catalog.spark_catalog", ICEBERG_CATALOG)
+        .config("spark.sql.catalog.spark_catalog.type", "hive")
+        .config("spark.hadoop.fs.defaultFS", default_fs)
+        .getOrCreate()
     )
 
 
@@ -57,8 +65,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    spark = SparkSession.builder.appName("sdv-load-iceberg").getOrCreate()
-    configure_iceberg(spark, args.default_fs)
+    spark = create_spark(args.default_fs)
     load_tables(spark, args.staging.rstrip("/"))
     spark.stop()
 

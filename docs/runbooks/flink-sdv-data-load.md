@@ -54,7 +54,8 @@ hdfs dfs -ls hdfs://ns1/user/kdap/staging/sdv/
 ## 3. PySpark — Parquet → Iceberg (권장)
 
 > **참고:** `-k`는 Impala 전용입니다. PySpark **스크립트는 `spark-submit`**, 대화형은 **`pyspark`** (jshin 클러스터 확인됨).  
-> `HADOOP_CONF_DIR` 미설정 시 standby NameNode WARN이 날 수 있습니다 — **0단계를 먼저** 실행하세요.
+> `HADOOP_CONF_DIR` 미설정 시 standby NameNode WARN이 날 수 있습니다 — **0단계를 먼저** 실행하세요.  
+> `spark.sql.extensions` 등 Iceberg 설정은 **SparkSession 시작 전**(`--conf` 또는 스크립트)에만 지정 가능합니다.
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -63,19 +64,19 @@ spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 sdv/load_
 
 스크립트: [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)
 
-대화형으로 실행하려면 `pyspark` 실행 후 아래를 붙여넣습니다:
+대화형으로 실행하려면 Iceberg `--conf`를 **pyspark 시작 시** 넘긴 뒤 적재 코드만 붙여넣습니다:
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-pyspark --driver-memory 4g --executor-memory 8g --num-executors 4
+pyspark --driver-memory 4g --executor-memory 8g --num-executors 4 \
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+  --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.spark_catalog.type=hive \
+  --conf spark.hadoop.fs.defaultFS=hdfs://ns1
 ```
 
 ```python
 staging = "hdfs://ns1/user/kdap/staging/sdv"
-spark.conf.set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkCatalog")
-spark.conf.set("spark.sql.catalog.spark_catalog.type", "hive")
-spark.conf.set("spark.hadoop.fs.defaultFS", "hdfs://ns1")
-spark.conf.set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
 spark.read.parquet(f"{staging}/bts_master.parquet").writeTo("iceberg.kdap.bts_master").overwritePartitions()
 spark.read.parquet(f"{staging}/cdr_sgi_raw.parquet").writeTo("iceberg.kdap.cdr_sgi_raw").append()
 spark.read.parquet(f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo("iceberg.kdap.cdr_mdt_smsng_raw").append()

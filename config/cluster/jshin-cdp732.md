@@ -86,11 +86,10 @@ Flink catalog SQL: [flink/conf/00_catalog_setup_jshin.sql](../../flink/conf/00_c
 | 용도 | 명령 |
 |------|------|
 | 스크립트 일괄 적재 | `spark-submit sdv/load_sdv_to_iceberg.py` |
-| 대화형 (jshin 확인됨) | `pyspark` |
+| 대화형 | `pyspark` + Iceberg `--conf` (runbook 참고) |
 
-사전: `export HADOOP_CONF_DIR=/etc/hadoop/conf` + `kinit`
-
-Iceberg 설정은 [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)에 포함되어 있습니다.
+사전: `export HADOOP_CONF_DIR=/etc/hadoop/conf` + `kinit`  
+Iceberg `spark.sql.extensions` 등은 Session 시작 전 `--conf`로만 설정 가능.
 
 ## Flink (CDP 7.3.2 / 1.20.1)
 
