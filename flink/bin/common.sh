@@ -22,6 +22,32 @@ SSL_OPTS=(
   -Djavax.net.ssl.trustStoreType=JKS
 )
 
+HIVE_METASTORE_API_CLASS="org/apache/hadoop/hive/metastore/api/NoSuchObjectException.class"
+
+load_repo_dotenv() {
+  local env_file="${REPO_ROOT}/.env"
+  [[ -f "$env_file" ]] || return 0
+  local line key value
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"
+    line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [[ -n "$line" && "$line" == *"="* ]] || continue
+    key="${line%%=*}"
+    value="${line#*=}"
+    value="${value%\"}"
+    value="${value#\"}"
+    value="${value%\'}"
+    value="${value#\'}"
+    if [[ -z "${!key:-}" ]]; then
+      export "$key=$value"
+    fi
+  done < "$env_file"
+}
+
+ssb_configured() {
+  [[ -n "${SSB_API_BASE:-}" ]]
+}
+
 # CDH Hive jars for Iceberg HiveCatalog (embedded SQL Gateway classpath).
 # Do NOT use flink-sql-connector-hive in CSA lib/ — it bundles Calcite and breaks INSERT.
 hive_jar_search_dirs() {
@@ -50,12 +76,37 @@ hive_jar_search_dirs() {
   printf '%s\n' "${dirs[@]}" | awk '!seen[$0]++'
 }
 
+jar_contains_class() {
+  local jar="$1" class_path="$2"
+  [[ -f "$jar" ]] || return 1
+  jar tf "$jar" 2>/dev/null | grep -Fq "$class_path"
+}
+
+append_unique_jar() {
+  local jar="$1" existing
+  [[ -f "$jar" ]] || return 0
+  for existing in "${HIVE_METASTORE_JARS[@]}"; do
+    [[ "$existing" == "$jar" ]] && return 0
+  done
+  HIVE_METASTORE_JARS+=("$jar")
+}
+
 first_hive_jar() {
   local prefix="$1"
   local dir jar
   while IFS= read -r dir; do
     [[ -n "$dir" && -d "$dir" ]] || continue
-    jar="$(find "$dir" -maxdepth 1 -type f -name "${prefix}-*.jar" 2>/dev/null | sort | head -n1)"
+    if [[ "$prefix" == "hive-exec" ]]; then
+      jar="$(find "$dir" -maxdepth 1 -type f -name 'hive-exec-*.jar' \
+        ! -name '*-core.jar' ! -name '*-tests.jar' 2>/dev/null | sort | head -n1)"
+      if [[ -z "$jar" ]]; then
+        jar="$(find "$dir" -maxdepth 1 -type f -name 'hive-exec-*-core.jar' \
+          ! -name '*-tests.jar' 2>/dev/null | sort | head -n1)"
+      fi
+    else
+      jar="$(find "$dir" -maxdepth 1 -type f -name "${prefix}-*.jar" \
+        ! -name '*-tests.jar' 2>/dev/null | sort | head -n1)"
+    fi
     if [[ -n "$jar" && -f "$jar" ]]; then
       printf '%s' "$jar"
       return 0
@@ -64,9 +115,41 @@ first_hive_jar() {
   return 1
 }
 
+find_jars_with_class() {
+  local class_path="$1"
+  local name_pattern="${2:-*.jar}"
+  local dir jar
+  while IFS= read -r dir; do
+    [[ -n "$dir" && -d "$dir" ]] || continue
+    while IFS= read -r jar; do
+      if jar_contains_class "$jar" "$class_path"; then
+        printf '%s\n' "$jar"
+      fi
+    done < <(find "$dir" -maxdepth 1 -type f -name "$name_pattern" 2>/dev/null)
+  done < <(hive_jar_search_dirs)
+}
+
+hive_metastore_api_present() {
+  local jar
+  for jar in "${HIVE_METASTORE_JARS[@]}"; do
+    if jar_contains_class "$jar" "$HIVE_METASTORE_API_CLASS"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 collect_hive_metastore_jars() {
   local prefix jar
-  local -a prefixes=(hive-metastore hive-common hive-serde hive-exec)
+  local -a prefixes=(
+    hive-standalone-metastore
+    hive-service-rpc
+    hive-metastore
+    hive-common
+    hive-serde
+    libthrift
+    libfb303
+  )
   HIVE_METASTORE_JARS=()
   HIVE_JAR_SEARCH_DIRS=()
   while IFS= read -r dir; do
@@ -75,8 +158,15 @@ collect_hive_metastore_jars() {
 
   for prefix in "${prefixes[@]}"; do
     jar="$(first_hive_jar "$prefix")" || true
-    if [[ -n "$jar" && -f "$jar" ]]; then
-      HIVE_METASTORE_JARS+=("$jar")
-    fi
+    [[ -n "$jar" ]] && append_unique_jar "$jar"
   done
+
+  jar="$(first_hive_jar "hive-exec")" || true
+  [[ -n "$jar" ]] && append_unique_jar "$jar"
+
+  if ! hive_metastore_api_present; then
+    while IFS= read -r jar; do
+      append_unique_jar "$jar"
+    done < <(find_jars_with_class "$HIVE_METASTORE_API_CLASS" 'hive-*.jar')
+  fi
 }

@@ -137,7 +137,20 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql
 
 확인: `/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help`
 
-### PoC 실행 순서 (sql-client — 기본)
+### PoC 실행 순서 (SSB — **권장**, Iceberg Hive catalog)
+
+```
+cp .env.example .env   # SSB_API_BASE — 호스트명은 API Explorer 값으로 확인
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+cd ~/KT_KDAP_Cloudera_PoC
+./flink/run_ltas_5min.sh
+```
+
+> sql-client embedded 모드는 CSA에서 Iceberg `HiveCatalog` classpath(HMS Thrift API)가 불안정합니다.  
+> `flink-sql-connector-hive`를 lib/에 두면 catalog는 되지만 INSERT Calcite 충돌. CDH `-j`만으로는 `NoSuchObjectException` 지속.
+
+### PoC 실행 순서 (sql-client — 실험용)
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -146,7 +159,7 @@ export HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive
 export HADOOP_CLASSPATH=$(hadoop classpath)
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd ~/KT_KDAP_Cloudera_PoC
-./flink/run_ltas_5min.sh
+FLINK_SUBMIT_BACKEND=sql-client ./flink/run_ltas_5min.sh
 ```
 
 직접 호출 (`-i` catalog, `-f` job — `-f` 두 번 쓰면 첫 파일만 실행됨):
@@ -158,16 +171,7 @@ cd ~/KT_KDAP_Cloudera_PoC
   -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
-### PoC 실행 순서 (SSB — 대안)
-
-```
-cp .env.example .env   # SSB_API_BASE 설정
-export HADOOP_CONF_DIR=/etc/hadoop/conf
-kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
-FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh
-```
-
-**자동 선택 (`FLINK_SUBMIT_BACKEND=auto`):** parcel에 sql-client bootstrap 되어 있으면 sql-client, 아니면 SSB.
+**자동 선택 (`FLINK_SUBMIT_BACKEND=auto`):** `.env`에 `SSB_API_BASE` 있으면 SSB, 없으면 sql-client(bootstrap 시) → SSB 권장.
 
 ## SDV 데이터 생성 (Edge 노드)
 

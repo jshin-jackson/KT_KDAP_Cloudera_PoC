@@ -161,8 +161,8 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## Step 4 — Catalog 설정 + Flink SQL Job 제출 (Flink SQL Client)
 
-> **jshin Edge Node:** Apache Flink 1.20.1에서 `sql-client.sh`, `flink-sql-client-*.jar`, **`flink-sql-gateway-*.jar`** 를 CSA parcel에 복사해 두었습니다.  
-> `FLINK_SUBMIT_BACKEND=sql-client`(`.env` 기본값)로 `./flink/run_*.sh` 실행 시 `flink-sql-client embedded -f ...` 로 제출됩니다.
+> **jshin Edge Node — 제출 경로:** Iceberg Hive catalog는 **SSB 권장** (`cp .env.example .env`, `FLINK_SUBMIT_BACKEND=ssb`).  
+> sql-client embedded는 CSA에서 HMS classpath 불안정 (`NoSuchObjectException` / INSERT Calcite 충돌).
 
 > **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.
 
@@ -364,7 +364,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 ./flink/run_ltas_5min.sh
 ```
 
-`FLINK_SUBMIT_BACKEND=auto`이면 parcel bootstrap 여부에 따라 sql-client / SSB 자동 선택.
+`FLINK_SUBMIT_BACKEND=auto`이면 `.env`의 `SSB_API_BASE` 우선 → SSB; 없으면 sql-client(bootstrap 시).
 
 ---
 
@@ -379,7 +379,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | Catalog 오류 | `Could not find factory iceberg` | `iceberg-flink-runtime-1.20-*.jar` → `$CSA_FLINK/lib/` |
-| Catalog 오류 | `NoSuchObjectException` / HiveCatalog init | CDH `hive-*.jar` via `-j` from `CDH/jars` (not literal globs; not flink-sql-connector-hive in lib/) |
+| Catalog 오류 | `NoSuchObjectException` (embedded sql-client) | **SSB 사용** — `cp .env.example .env` 후 `./flink/run_*.sh` |
 | sql-client 시작 실패 | `JAR file does not exist '...hive-exec-*.jar'` | `git pull` — scripts resolve jars with `find` under `CDH/jars` |
 | INSERT 실패 | `NoSuchFieldError: operands` | `rm $CSA_FLINK/lib/flink-sql-connector-hive-*.jar` (use CDH `-j` jars instead) |
 | Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_HOME` + `HIVE_CONF_DIR=${HIVE_HOME}/conf` (CDP: `.../CDH/lib/hive/conf`) |
