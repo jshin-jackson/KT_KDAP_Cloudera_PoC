@@ -2,8 +2,8 @@
 # shellcheck shell=bash
 
 export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-/etc/hadoop/conf}"
-export HIVE_CONF_DIR="${HIVE_CONF_DIR:-/etc/hadoop/conf}"
 export HIVE_HOME="${HIVE_HOME:-/opt/cloudera/parcels/CDH/lib/hive}"
+export HIVE_CONF_DIR="${HIVE_CONF_DIR:-${HIVE_HOME}/conf}"
 
 FLINK_BIN="${FLINK_BIN:-/opt/cloudera/parcels/FLINK/bin}"
 CSA_FLINK_LIB="${CSA_FLINK_LIB:-/opt/cloudera/parcels/FLINK/lib/flink}"

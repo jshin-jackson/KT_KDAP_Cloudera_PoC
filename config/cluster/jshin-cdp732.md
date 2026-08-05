@@ -140,7 +140,7 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-export HIVE_CONF_DIR=/etc/hadoop/conf
+export HIVE_CONF_DIR=/opt/cloudera/parcels/CDH/lib/hive/conf
 export HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive
 export HADOOP_CLASSPATH=$(hadoop classpath)
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM

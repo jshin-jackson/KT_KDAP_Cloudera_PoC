@@ -382,7 +382,8 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | Catalog 오류 | `Could not find factory iceberg` | `iceberg-flink-runtime-1.20-*.jar` → `$CSA_FLINK/lib/` |
 | Catalog 오류 | `NoSuchObjectException` (HiveCatalog) | Maven에서 `flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar` → `$CSA_FLINK/lib/` |
-| Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_CONF_DIR=/etc/hadoop/conf` + `HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive` |
+| Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_HOME` + `HIVE_CONF_DIR=${HIVE_HOME}/conf` (CDP: `.../CDH/lib/hive/conf`) |
+| Catalog 오류 | `hive-site.xml under /etc/hadoop/conf` | catalog `hive-conf-dir` → `/opt/cloudera/parcels/CDH/lib/hive/conf` (not hadoop conf) |
 | Job 미제출 | `-f` 두 파일 지정 | Flink는 **첫 `-f`만** 실행 — catalog는 `-i`, job은 `-f` (`./flink/run_ltas_5min.sh` 권장) |
 | CREATE TABLE 실패 | `connector=iceberg` in iceberg catalog | init 후 `USE CATALOG default_catalog` — connector DDL은 default catalog에 생성 |
 | Catalog 오류 | Hive client 버전 불일치 | CDH Hive client 사용 또는 **SSB** (`FLINK_SUBMIT_BACKEND=ssb`) |

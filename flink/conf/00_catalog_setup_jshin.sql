@@ -20,7 +20,7 @@ CREATE CATALOG IF NOT EXISTS iceberg_hive_catalog WITH (
   'catalog-type'     = 'hive',
   'uri'              = 'thrift://ccycloud-1.jshin.root.comops.site:9083,thrift://ccycloud-3.jshin.root.comops.site:9083',
   'warehouse'        = 'hdfs://ns1/user/hive/warehouse',
-  'hive-conf-dir'    = '/etc/hadoop/conf',
+  'hive-conf-dir'    = '/opt/cloudera/parcels/CDH/lib/hive/conf',
   'hadoop-conf-dir'  = '/etc/hadoop/conf',
   'clients'          = '5',
   'property-version' = '1'
