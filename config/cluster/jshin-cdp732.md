@@ -123,6 +123,7 @@ chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
 # flink-sql-connector-hive 는 lib/ 에 넣지 않음 (INSERT Calcite 충돌)
+# HiveCatalog 클래스는 run_*.sh 가 HIVE_HOME/lib 의 hive-exec 등을 -j 로 전달
 rm -f $CSA_FLINK/lib/flink-sql-connector-hive-*.jar
 chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
