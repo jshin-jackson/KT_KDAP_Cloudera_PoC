@@ -3,8 +3,15 @@
 
 Run on CDP edge (after kinit + HADOOP_CONF_DIR):
 
+  export HADOOP_CONF_DIR=/etc/hadoop/conf
   spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 \\
     sdv/load_sdv_to_iceberg.py
+
+HMS URI defaults to hive-site.xml under HADOOP_CONF_DIR (recommended on CDP).
+Override only when needed, e.g. jshin HA HMS:
+
+  spark-submit ... sdv/load_sdv_to_iceberg.py \\
+    --hms-uri 'thrift://ccycloud-1.jshin.root.comops.site:9083,thrift://ccycloud-3.jshin.root.comops.site:9083'
 
 Interactive debugging — Iceberg configs must be set at startup (not via spark.conf.set):
 
@@ -13,11 +20,11 @@ Interactive debugging — Iceberg configs must be set at startup (not via spark.
     --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \\
     --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkCatalog \\
     --conf spark.sql.catalog.spark_catalog.type=hive \\
-    --conf spark.sql.catalog.spark_catalog.uri=thrift://ccycloud-5.jshin.root.comops.site:9083 \\
     --conf spark.sql.catalog.spark_catalog.warehouse=hdfs://ns1/user/hive/warehouse \\
     --conf spark.hadoop.fs.defaultFS=hdfs://ns1
 
 Table qualifier must match the catalog name: spark_catalog.kdap.* (not iceberg.kdap.*).
+ccycloud-5 is Impala — not Hive Metastore (HMS: ccycloud-1, ccycloud-3).
 """
 
 from __future__ import annotations
@@ -29,22 +36,27 @@ from pyspark.sql import SparkSession
 ICEBERG_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 ICEBERG_CATALOG_CLASS = "org.apache.iceberg.spark.SparkCatalog"
 CATALOG_NAME = "spark_catalog"
-DEFAULT_HMS_URI = "thrift://ccycloud-5.jshin.root.comops.site:9083"
 DEFAULT_WAREHOUSE = "hdfs://ns1/user/hive/warehouse"
+# jshin HA HMS (Impala is on ccycloud-5 — do not use for metastore)
+JSHIN_HMS_URI = (
+    "thrift://ccycloud-1.jshin.root.comops.site:9083,"
+    "thrift://ccycloud-3.jshin.root.comops.site:9083"
+)
 
 
-def create_spark(default_fs: str, hms_uri: str, warehouse: str) -> SparkSession:
+def create_spark(default_fs: str, hms_uri: str | None, warehouse: str) -> SparkSession:
     prefix = f"spark.sql.catalog.{CATALOG_NAME}"
-    return (
+    builder = (
         SparkSession.builder.appName("sdv-load-iceberg")
         .config("spark.sql.extensions", ICEBERG_EXTENSIONS)
-        .config(f"{prefix}", ICEBERG_CATALOG_CLASS)
+        .config(prefix, ICEBERG_CATALOG_CLASS)
         .config(f"{prefix}.type", "hive")
-        .config(f"{prefix}.uri", hms_uri)
         .config(f"{prefix}.warehouse", warehouse)
         .config("spark.hadoop.fs.defaultFS", default_fs)
-        .getOrCreate()
     )
+    if hms_uri:
+        builder = builder.config(f"{prefix}.uri", hms_uri)
+    return builder.getOrCreate()
 
 
 def table(name: str) -> str:
@@ -79,8 +91,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--hms-uri",
-        default=DEFAULT_HMS_URI,
-        help="Hive Metastore URI for Iceberg Hive catalog",
+        default=None,
+        help=(
+            "Hive Metastore URI for Iceberg catalog. "
+            "Omit to use hive.metastore.uris from HADOOP_CONF_DIR/hive-site.xml. "
+            f"jshin override: {JSHIN_HMS_URI!r}"
+        ),
     )
     parser.add_argument(
         "--warehouse",

@@ -74,10 +74,18 @@ Flink SQL Client JVM 옵션:
 
 | 항목 | 값 |
 |------|-----|
-| HMS URI | `thrift://ccycloud-5.jshin.root.comops.site:9083` |
+| HMS Hosts | `ccycloud-1.jshin.root.comops.site`, `ccycloud-3.jshin.root.comops.site` (port 9083) |
+| HMS URI (HA) | `thrift://ccycloud-1.jshin.root.comops.site:9083,thrift://ccycloud-3.jshin.root.comops.site:9083` |
+| Impala (별도) | `ccycloud-5.jshin.root.comops.site:25003` — **HMS 아님** |
 | Warehouse | `hdfs://ns1/user/hive/warehouse` |
 | Spark Catalog | `spark_catalog` (Hive-type Iceberg) |
 | Flink Catalog | `iceberg_hive_catalog` |
+
+HMS URI 확인 (`HADOOP_CONF_DIR` 설정 후):
+
+```
+grep hive.metastore.uris /etc/hadoop/conf/hive-site.xml
+```
 
 Flink catalog SQL: [flink/conf/00_catalog_setup_jshin.sql](../../flink/conf/00_catalog_setup_jshin.sql)
 

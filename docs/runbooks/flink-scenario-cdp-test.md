@@ -162,7 +162,7 @@ Flink Gateway 노드에서 SQL Client 실행:
 
 ## 6. Flink — Iceberg Catalog 설정
 
-**jshin 클러스터**는 `flink/conf/00_catalog_setup_jshin.sql` 사용 (HMS: `ccycloud-5.jshin.root.comops.site:9083`).
+**jshin 클러스터**는 `flink/conf/00_catalog_setup_jshin.sql` 사용 (HMS HA: `ccycloud-1` + `ccycloud-3`:9083, Impala는 `ccycloud-5`).
 
 **방법 A — 파일 적용 (권장, jshin + TLS)**
 

@@ -5,7 +5,7 @@
 CREATE CATALOG IF NOT EXISTS iceberg_hive_catalog WITH (
   'type'             = 'iceberg',
   'catalog-type'     = 'hive',
-  'uri'              = 'thrift://ccycloud-5.jshin.root.comops.site:9083',
+  'uri'              = 'thrift://ccycloud-1.jshin.root.comops.site:9083,thrift://ccycloud-3.jshin.root.comops.site:9083',
   'warehouse'        = 'hdfs://ns1/user/hive/warehouse',
   'clients'          = '5',
   'property-version' = '1'

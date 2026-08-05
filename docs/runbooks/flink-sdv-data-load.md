@@ -55,17 +55,26 @@ hdfs dfs -ls hdfs://ns1/user/kdap/staging/sdv/
 
 > **참고:** `-k`는 Impala 전용입니다. PySpark **스크립트는 `spark-submit`**, 대화형은 **`pyspark`** (jshin 클러스터 확인됨).  
 > `HADOOP_CONF_DIR` 미설정 시 standby NameNode WARN이 날 수 있습니다 — **0단계를 먼저** 실행하세요.  
-> `spark.sql.extensions` 등 Iceberg 설정은 **SparkSession 시작 전**(`--conf` 또는 스크립트)에만 지정 가능합니다.
+> `spark.sql.extensions` 등 Iceberg 설정은 **SparkSession 시작 전**(`--conf` 또는 스크립트)에만 지정 가능합니다.  
+> **HMS**는 `ccycloud-1` / `ccycloud-3` (9083). `ccycloud-5`는 Impala 전용 — metastore URI로 쓰면 Connection refused.
+
+HMS URI 확인:
+
+```
+grep hive.metastore.uris /etc/hadoop/conf/hive-site.xml
+```
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
 spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 sdv/load_sdv_to_iceberg.py
 ```
 
+(`HADOOP_CONF_DIR` 설정 시 스크립트는 `hive-site.xml`의 metastore URI를 자동 사용)
+
 스크립트: [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)
 
 대화형으로 실행하려면 Iceberg `--conf`를 **pyspark 시작 시** 넘긴 뒤 적재 코드만 붙여넣습니다  
-(catalog 이름 `spark_catalog` — `iceberg.kdap.*` 아님):
+(catalog 이름 `spark_catalog` — `iceberg.kdap.*` 아님, **`uri` `--conf` 생략** → hive-site.xml 사용):
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -73,9 +82,14 @@ pyspark --driver-memory 4g --executor-memory 8g --num-executors 4 \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
   --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkCatalog \
   --conf spark.sql.catalog.spark_catalog.type=hive \
-  --conf spark.sql.catalog.spark_catalog.uri=thrift://ccycloud-5.jshin.root.comops.site:9083 \
   --conf spark.sql.catalog.spark_catalog.warehouse=hdfs://ns1/user/hive/warehouse \
   --conf spark.hadoop.fs.defaultFS=hdfs://ns1
+```
+
+hive-site.xml이 없거나 URI를 명시해야 할 때만 추가:
+
+```
+  --conf spark.sql.catalog.spark_catalog.uri=thrift://ccycloud-1.jshin.root.comops.site:9083,thrift://ccycloud-3.jshin.root.comops.site:9083 \
 ```
 
 ```python
