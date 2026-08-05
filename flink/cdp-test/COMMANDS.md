@@ -75,11 +75,24 @@ python3.11 sdv/generate_flink_data.py --scale bts=5000 --scale sgi=1000000 --sca
 
 ---
 
-## 5. Flink Job — LTAS
+## 5. Flink YARN Session (1회)
 
 ```
+export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 ```
+
+```
+/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -nm sbi-flink-sql -s 2 -tm 2048
+```
+
+```
+yarn application -list | grep sbi-flink-sql
+```
+
+---
+
+## 6. Flink Job — LTAS
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
@@ -87,7 +100,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 
 ---
 
-## 6. Flink Job — SGi v1 / v2 / MDT (각각 새 터미널)
+## 7. Flink Job — SGi v1 / v2 / MDT (YARN session 유지, SQL만 추가)
 
 ```
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
@@ -107,7 +120,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 
 ---
 
-## 7. 결과 확인 (5~6분 후)
+## 8. 결과 확인 (5~6분 후)
 
 ```
 impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d default -k --ssl --ca_cert=/var/lib/cloudera-scm-agent/agent-cert/cm-auto-global_cacerts.pem -f flink/cdp-test/impala_03_validate.sql
@@ -115,7 +128,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## 8. Job 상태 / 중지
+## 9. Job / YARN Session 상태
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink list
@@ -123,6 +136,10 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink cancel <JOB_ID>
+```
+
+```
+yarn application -kill <application_id>   # sbi-flink-sql session 종료
 ```
 
 ---

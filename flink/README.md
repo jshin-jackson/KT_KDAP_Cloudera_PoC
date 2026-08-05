@@ -159,23 +159,39 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## Step 4 + 5 — Flink Job 실행 (Catalog + LTAS)
+## Step 4 — YARN Session 시작 (1회)
 
-Flink SQL Client로 **Catalog 연결**과 **Job 제출**을 한 번에 합니다.
+> **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.  
+> YARN session을 **먼저 detached로 띄운 뒤**, SQL Client로 job을 제출합니다.
 
-> **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서, 제출 후 **계속 실행(RUNNING)** 상태가 정상입니다. 끝나지 않습니다.
-
-**Flink 경로 (jshin 확인):** `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` — `sql-client.sh` 아님.
+**사전:** `sql-client.sh` / `flink-sql-client*.jar`가 parcel에 없으면 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) 참고.
 
 ```
-ls /opt/cloudera/parcels/FLINK/bin
-chmod +x scripts/flink_sql_client.sh
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 ```
+
+```
+/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -nm sbi-flink-sql -s 2 -tm 2048
+```
+
+YARN Application **RUNNING** 확인:
+
+```
+yarn application -list | grep sbi-flink-sql
+```
+
+---
+
+## Step 5 — Flink SQL Job 제출 (Catalog + LTAS)
+
+YARN session(`sbi-flink-sql`)이 떠 있는 **같은 edge 노드**에서 실행합니다.  
+(`.yarn-properties`가 생성되어 있어야 SQL Client가 session에 붙습니다.)
 
 ### F-LTAS (첫 번째 Job — 여기부터 시작)
 
 ```
-./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 **Job 안에서 일어나는 일 (쉬운 설명):**
@@ -188,24 +204,24 @@ chmod +x scripts/flink_sql_client.sh
 
 ### F-SGi-1 / F-SGi-2 / F-MDT (추가 Job)
 
-각 Job은 **새 터미널**을 열고 `kinit` 후 실행합니다.
+**YARN session은 재시작하지 않습니다.** `kinit` 후 SQL Client만 다시 실행합니다.
 
 **F-SGi-1:**
 
 ```
-./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v1.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v1.sql
 ```
 
 **F-SGi-2:**
 
 ```
-./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
 ```
 
 **F-MDT:**
 
 ```
-./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
 ```
 
 ---
@@ -248,19 +264,39 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## Job 중지 / 상태 확인
 
-**상태 확인:**
+**Flink job 목록 (YARN session 내):**
 
 ```
-./scripts/flink_sql_client.sh flink list
+/opt/cloudera/parcels/FLINK/bin/flink list
 ```
 
-**Job 중지:**
+**Job cancel:**
 
 ```
-./scripts/flink_sql_client.sh flink cancel <JOB_ID>
+/opt/cloudera/parcels/FLINK/bin/flink cancel <JOB_ID>
+```
+
+**YARN session 종료 (`sbi-flink-sql`):**
+
+```
+yarn application -list | grep sbi-flink-sql
+yarn application -kill <application_id>
 ```
 
 또는 Cloudera Manager → Flink → **Web UI** → Running Jobs → Cancel
+
+---
+
+## Flink SQL Client 보완 (CSA parcel)
+
+jshin parcel에 `lib/flink/bin/sql-client.sh` 및 `flink-sql-client*.jar`가 없으면 Apache Flink **1.20.1** binary에서 복사:
+
+```
+cp flink-1.20.1/bin/sql-client.sh /opt/cloudera/parcels/FLINK/lib/flink/bin/
+cp flink-1.20.1/opt/flink-sql-client-*.jar /opt/cloudera/parcels/FLINK/lib/flink/opt/
+cp flink-1.20.1/opt/flink-sql-gateway-*.jar /opt/cloudera/parcels/FLINK/lib/flink/opt/
+chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
+```
 
 ---
 
@@ -274,6 +310,8 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 | 결과 0건 | 윈도우 미완료 | 5~6분 더 대기 |
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
+| SQL Client 실패 | `sql-client.sh` 없음 | 위 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) |
+| Job 제출 실패 | YARN session 없음 | `flink-yarn-session -d -nm sbi-flink-sql ...` 재실행 |
 
 ---
 

@@ -149,23 +149,30 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ## 5. Flink Job 실행
 
-jshin Flink bin (확인됨): `/opt/cloudera/parcels/FLINK/bin/flink-sql-client`
+### 5a. YARN Session (1회)
 
 ```
-ls /opt/cloudera/parcels/FLINK/bin
-```
-
-```
+export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
-chmod +x scripts/flink_sql_client.sh
-./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
-직접 실행:
+```
+/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -nm sbi-flink-sql -s 2 -tm 2048
+```
+
+```
+yarn application -list | grep sbi-flink-sql
+```
+
+### 5b. SQL Job (LTAS)
+
+YARN session RUNNING 확인 후:
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
+
+> CSA parcel에 `sql-client.sh` / `flink-sql-client*.jar` 없으면 Apache Flink 1.20.1에서 `lib/flink/bin`, `lib/flink/opt`로 복사 필요.
 
 ---
 
