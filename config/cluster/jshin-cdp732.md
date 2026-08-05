@@ -122,8 +122,8 @@ chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar
-cp flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar $CSA_FLINK/lib/
+# flink-sql-connector-hive 는 lib/ 에 넣지 않음 (INSERT Calcite 충돌)
+rm -f $CSA_FLINK/lib/flink-sql-connector-hive-*.jar
 chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
 

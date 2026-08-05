@@ -303,12 +303,11 @@ chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-# Hive connector — Flink binary tarball에 없음, Maven에서 별도 다운로드
-curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar
-cp flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar $CSA_FLINK/lib/
 # Iceberg: Flink 1.20용 (1.18 JAR는 교체 권장)
 find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'
 cp /path/to/iceberg-flink-runtime-1.20-*.jar $CSA_FLINK/lib/
+# Hive: lib/ 에 flink-sql-connector-hive 넣지 말 것 (Calcite 충돌). 아래 env 사용.
+rm -f $CSA_FLINK/lib/flink-sql-connector-hive-*.jar
 chown flink:flink $CSA_FLINK/lib/flink-sql-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
 
@@ -317,10 +316,9 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-*.jar $CSA_FLINK/lib/iceberg-flink-ru
 | `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
 | `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
 | `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
-| `flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar` (Maven) | `$CSA_FLINK/lib/` |
 | `iceberg-flink-runtime-1.20-*.jar` | `$CSA_FLINK/lib/iceberg-flink-runtime-*.jar` |
 
-> **Hive connector:** `flink-1.20.1-bin-scala_2.12.tgz`에는 **포함되지 않음**. Maven에서 별도 다운로드.
+> **Hive / HMS:** `flink-sql-connector-hive` 를 **`lib/`에 두면 INSERT 시 Calcite 충돌** (`NoSuchFieldError: operands`). CDH Hive client는 `HIVE_HOME` + `HADOOP_CLASSPATH` 로 제공.
 
 > **Iceberg catalog:** Flink 1.16+ embedded SQL Client는 `iceberg-flink-runtime` JAR가 **`lib/`** 에 있어야 `CREATE CATALOG ... type=iceberg` 가 동작합니다.  
 > parcel에 없으면 `find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'` 로 검색 후 복사하거나 Maven에서 내려받습니다.
@@ -381,7 +379,8 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | Catalog 오류 | `Could not find factory iceberg` | `iceberg-flink-runtime-1.20-*.jar` → `$CSA_FLINK/lib/` |
-| Catalog 오류 | `NoSuchObjectException` (HiveCatalog) | Maven에서 `flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar` → `$CSA_FLINK/lib/` |
+| Catalog 오류 | `NoSuchObjectException` (HiveCatalog) | `HIVE_HOME` + `HIVE_CONF_DIR` + `HADOOP_CLASSPATH` — **not** flink-sql-connector-hive in lib/ |
+| INSERT 실패 | `NoSuchFieldError: operands` | `rm $CSA_FLINK/lib/flink-sql-connector-hive-*.jar` (Calcite conflict with planner) |
 | Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_HOME` + `HIVE_CONF_DIR=${HIVE_HOME}/conf` (CDP: `.../CDH/lib/hive/conf`) |
 | Catalog 오류 | `hive-site.xml under /etc/hadoop/conf` | catalog `hive-conf-dir` → `/opt/cloudera/parcels/CDH/lib/hive/conf` (not hadoop conf) |
 | Job 미제출 | `-f` 두 파일 지정 | Flink는 **첫 `-f`만** 실행 — catalog는 `-i`, job은 `-f` (`./flink/run_ltas_5min.sh` 권장) |

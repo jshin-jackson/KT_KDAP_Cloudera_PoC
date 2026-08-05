@@ -61,9 +61,8 @@ if [[ "$BACKEND" == "sql-client" ]]; then
     echo "    cp flink-1.20.1/bin/sql-client.sh \$CSA_FLINK/bin/" >&2
     echo "    cp flink-1.20.1/opt/flink-sql-client-*.jar \$CSA_FLINK/lib/" >&2
     echo "    cp flink-1.20.1/opt/flink-sql-gateway-*.jar \$CSA_FLINK/lib/" >&2
-    echo "    curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar" >&2
-    echo "    cp flink-sql-connector-hive-*.jar \$CSA_FLINK/lib/" >&2
     echo "    cp iceberg-flink-runtime-1.20-*.jar \$CSA_FLINK/lib/" >&2
+    echo "  Do NOT put flink-sql-connector-hive in lib/ (Calcite conflict). Use HIVE_HOME + HADOOP_CLASSPATH." >&2
     echo "  Or script: ./scripts/bootstrap_flink_sql_client.sh /path/to/flink-${FLINK_VERSION:-1.20.1} --target parcel" >&2
     echo "  Or use SSB:  FLINK_SUBMIT_BACKEND=ssb $0 ..." >&2
     exit 1
