@@ -101,12 +101,23 @@ Iceberg `spark.sql.extensions` 등은 Session 시작 전 `--conf`로만 설정 �
 
 ## Flink (CDP 7.3.2 / 1.20.1)
 
-```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
-```
+jshin 확인 경로:
+
+| 항목 | 경로 |
+|------|------|
+| FLINK_HOME | `/opt/cloudera/parcels/FLINK` |
+| SQL Client | `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` |
+| CLI | `/opt/cloudera/parcels/FLINK/bin/flink` |
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/flink list
+ls /opt/cloudera/parcels/FLINK/bin
+```
+
+Repo helper:
+
+```
+./scripts/flink_sql_client.sh embedded ...
+./scripts/flink_sql_client.sh flink list
 ```
 
 ## SDV 데이터 생성 (Edge 노드)

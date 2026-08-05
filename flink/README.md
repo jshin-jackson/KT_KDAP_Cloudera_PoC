@@ -165,10 +165,17 @@ Flink SQL Client로 **Catalog 연결**과 **Job 제출**을 한 번에 합니다
 
 > **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서, 제출 후 **계속 실행(RUNNING)** 상태가 정상입니다. 끝나지 않습니다.
 
+**Flink 경로 (jshin 확인):** `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` — `sql-client.sh` 아님.
+
+```
+ls /opt/cloudera/parcels/FLINK/bin
+chmod +x scripts/flink_sql_client.sh
+```
+
 ### F-LTAS (첫 번째 Job — 여기부터 시작)
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 **Job 안에서 일어나는 일 (쉬운 설명):**
@@ -186,19 +193,19 @@ Flink SQL Client로 **Catalog 연결**과 **Job 제출**을 한 번에 합니다
 **F-SGi-1:**
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v1.sql
+./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v1.sql
 ```
 
 **F-SGi-2:**
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
+./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
 ```
 
 **F-MDT:**
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
+./scripts/flink_sql_client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
 ```
 
 ---
@@ -244,13 +251,13 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 **상태 확인:**
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/flink list
+./scripts/flink_sql_client.sh flink list
 ```
 
 **Job 중지:**
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/flink cancel <JOB_ID>
+./scripts/flink_sql_client.sh flink cancel <JOB_ID>
 ```
 
 또는 Cloudera Manager → Flink → **Web UI** → Running Jobs → Cancel

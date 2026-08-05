@@ -38,7 +38,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 ---
@@ -153,10 +153,10 @@ impala-shell -k -q "SELECT COUNT(*) FROM kdap.bts_master"
 Flink Gateway 노드에서 SQL Client 실행:
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded
 ```
 
-> Parcel 경로가 다르면 CM → Flink → Configuration → **FLINK_HOME** 확인 후 해당 `bin/sql-client.sh` 사용
+> Parcel 경로: jshin → `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` (`sql-client.sh` / `lib/flink/bin` 아님)
 
 ---
 
@@ -167,7 +167,7 @@ Flink Gateway 노드에서 SQL Client 실행:
 **방법 A — 파일 적용 (권장, jshin + TLS)**
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql
 ```
 
 **방법 B — 일반 클러스터**
@@ -175,7 +175,7 @@ Flink Gateway 노드에서 SQL Client 실행:
 `flink/conf/00_catalog_setup.sql` 에서 `<HMS_HOST>` 수정 후:
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -f flink/conf/00_catalog_setup.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql
 ```
 
 ---
@@ -187,25 +187,25 @@ Flink Gateway 노드에서 SQL Client 실행:
 ### 7-1. F-LTAS (LTAS 5분 집계) — jshin
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 ### 7-2. F-SGi-1 (SGi 5분 집계 v1)
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -f flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v1.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v1.sql
 ```
 
 ### 7-3. F-SGi-2 (SGi 5분 집계 v2)
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -f flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v2.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v2.sql
 ```
 
 ### 7-4. F-MDT (MDT 5분 집계)
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh embedded -f flink/conf/00_catalog_setup.sql -f flink/mdt_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql -f flink/mdt_5min.sql
 ```
 
 > Job이 `RUNNING` 상태로 유지되면 정상입니다. INSERT INTO streaming job 은 종료하지 않습니다.
@@ -301,11 +301,11 @@ Flink Web UI → Job 선택 → **Cancel**
 또는 CLI:
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/flink list
+/opt/cloudera/parcels/FLINK/bin/flink list
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/lib/flink/bin/flink cancel <JOB_ID>
+/opt/cloudera/parcels/FLINK/bin/flink cancel <JOB_ID>
 ```
 
 ---
