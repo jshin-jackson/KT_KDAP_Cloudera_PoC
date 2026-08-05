@@ -147,20 +147,31 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## 5. Flink Job 실행
+## 5. Flink Job 실행 (Flink SQL Client)
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 ```
 
-**LTAS (또는 `./flink/run_ltas_5min.sh`):**
+**LTAS:**
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+./flink/run_ltas_5min.sh
 ```
 
-> CSA parcel에 `sql-client.sh` / `flink-sql-client*.jar` 없으면 Apache Flink 1.20.1에서 `lib/flink/bin`, `lib/flink/opt`로 복사 필요.
+직접 호출:
+
+```
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
+  -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
+  -Djavax.net.ssl.trustStorePassword=changeit \
+  -Djavax.net.ssl.trustStoreType=JKS \
+  -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+```
+
+> jshin Edge Node: Apache Flink 1.20.1에서 `sql-client.sh` → `lib/flink/bin/`, `flink-sql-client-*.jar` → `lib/flink/lib/` 복사 완료.  
+> SSB 대안: `FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh`
 
 ---
 

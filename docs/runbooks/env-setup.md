@@ -67,9 +67,17 @@ spark-submit sdv/load_sdv_to_iceberg.py
 
 대화형: `pyspark` → `spark.sql("SHOW TABLES IN kdap").show()`
 
-## 7. Flink TLS
+## 7. Flink TLS + SQL Client
 
-Flink SQL Client 실행 시 truststore JVM 옵션 포함 (Auto-TLS):
+jshin Edge Node: Apache Flink 1.20.1 SQL Client가 CSA parcel에 복사됨 (`lib/flink/bin/sql-client.sh`, `lib/flink/lib/flink-sql-client-*.jar`).
+
+**권장 (repo wrapper):**
+
+```
+./flink/run_ltas_5min.sh
+```
+
+**직접 호출 (Auto-TLS truststore 포함):**
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql

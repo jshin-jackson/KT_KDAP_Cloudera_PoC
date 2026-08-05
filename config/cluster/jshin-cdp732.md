@@ -99,25 +99,66 @@ Flink catalog SQL: [flink/conf/00_catalog_setup_jshin.sql](../../flink/conf/00_c
 사전: `export HADOOP_CONF_DIR=/etc/hadoop/conf` + `kinit`  
 Iceberg `spark.sql.extensions` 등은 Session 시작 전 `--conf`로만 설정 가능.
 
-## Flink (CDP 7.3.2 / 1.20.1)
+## Flink (CDP 7.3.2 / 1.20.1 / CSA)
 
 jshin 확인 경로:
 
 | 항목 | 경로 |
 |------|------|
 | FLINK_HOME | `/opt/cloudera/parcels/FLINK` |
-| SQL Client | `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` |
-| CLI | `/opt/cloudera/parcels/FLINK/bin/flink` |
+| CSA_FLINK (lib/flink) | `/opt/cloudera/parcels/FLINK/lib/flink` |
+| flink-sql-client | `/opt/cloudera/parcels/FLINK/bin/flink-sql-client` |
+| SSB Web UI | CM → SQL Stream Builder (port **8082**) |
+| SSB REST API | SSB UI → **API Explorer** → Base URL |
 
-**PoC 실행 순서:**
+### CSA SQL Client bootstrap (jshin Edge Node — 적용 완료)
+
+CSA parcel에 Apache Flink 1.20.1 SQL Client 파일 복사:
+
+```
+CSA_FLINK=/opt/cloudera/parcels/FLINK-1.20.1-csa1.17.1.0-81475796/lib/flink
+cp ~/flink-1.20.1/bin/sql-client.sh $CSA_FLINK/bin/
+chmod +x $CSA_FLINK/bin/sql-client.sh
+chown flink:flink $CSA_FLINK/bin/sql-client.sh
+cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
+chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar
+```
+
+| Apache Flink 원본 | parcel 대상 |
+|-------------------|-------------|
+| `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
+| `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
+
+확인: `/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help`
+
+### PoC 실행 순서 (sql-client — 기본)
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded ... -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+cd ~/KT_KDAP_Cloudera_PoC
+./flink/run_ltas_5min.sh
 ```
 
-**`flink-sql-client: sql-client.sh: No such file`** → Apache Flink 1.20.1에서 `sql-client.sh` + `opt/flink-sql-client*.jar`를 parcel에 복사.
+직접 호출:
+
+```
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
+  -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
+  -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
+  -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+```
+
+### PoC 실행 순서 (SSB — 대안)
+
+```
+cp .env.example .env   # SSB_API_BASE 설정
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh
+```
+
+**자동 선택 (`FLINK_SUBMIT_BACKEND=auto`):** parcel에 sql-client bootstrap 되어 있으면 sql-client, 아니면 SSB.
 
 ## SDV 데이터 생성 (Edge 노드)
 

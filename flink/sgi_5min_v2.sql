@@ -6,11 +6,13 @@
 --   kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 --   ./flink/run_sgi_5min_v2.sh
 --
--- Manual:
+-- Manual (flink-sql-client):
 --   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
 --     -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
 --     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
 --     -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
+-- Fallback (SSB):
+--   FLINK_SUBMIT_BACKEND=ssb ./flink/run_sgi_5min_v2.sh
 
 SET 'execution.runtime-mode' = 'streaming';
 SET 'table.exec.state.ttl' = '1 h';

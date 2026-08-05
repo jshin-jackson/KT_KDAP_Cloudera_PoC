@@ -7,11 +7,13 @@
 --   kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 --   ./flink/run_catalog_setup.sh
 --
--- Manual:
+-- Manual (flink-sql-client):
 --   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
 --     -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
 --     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
 --     -f flink/conf/00_catalog_setup_jshin.sql
+-- Fallback (SSB):
+--   FLINK_SUBMIT_BACKEND=ssb ./flink/run_catalog_setup.sh
 
 CREATE CATALOG IF NOT EXISTS iceberg_hive_catalog WITH (
   'type'             = 'iceberg',

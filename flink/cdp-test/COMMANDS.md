@@ -75,7 +75,10 @@ python3.11 sdv/generate_flink_data.py --scale bts=5000 --scale sgi=1000000 --sca
 
 ---
 
-## 5. Flink SQL Job 제출
+## 5. Flink SQL Job 제출 (Flink SQL Client)
+
+**사전:** jshin Edge Node에 Apache Flink 1.20.1 SQL Client가 CSA parcel에 복사되어 있음  
+(`lib/flink/bin/sql-client.sh` + `lib/flink/lib/flink-sql-client-*.jar`)
 
 **세션 초기화 (매 터미널):**
 
@@ -103,30 +106,26 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 ./flink/run_mdt_5min.sh
 ```
 
-### 방법 B — 수동 (flink-sql-client)
-
-**F-LTAS:**
+### 방법 B — flink-sql-client 직접
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
+  -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
+  -Djavax.net.ssl.trustStorePassword=changeit \
+  -Djavax.net.ssl.trustStoreType=JKS \
+  -f flink/conf/00_catalog_setup_jshin.sql \
+  -f flink/ltas_5min.sql
 ```
 
-**F-SGi-1 / F-SGi-2 / F-MDT (kinit 후 SQL 추가):**
+### 방법 C — SSB REST API (대안)
 
 ```
-kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
-```
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v1.sql
-```
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
+FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
+python3.11 scripts/ssb_submit_sql.py flink/ltas_5min.sql
+python3.11 scripts/ssb_submit_sql.py --list-jobs
 ```
 
 ---

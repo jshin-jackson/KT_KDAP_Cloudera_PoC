@@ -17,6 +17,10 @@ config/local/
 .env
 *.keytab
 
+# Apache Flink vendor copy (bootstrap_flink_sql_client.sh)
+flink/vendor/apache-flink-*/
+!flink/vendor/.gitkeep
+
 # Generated SQL with secrets
 **/logs/
 

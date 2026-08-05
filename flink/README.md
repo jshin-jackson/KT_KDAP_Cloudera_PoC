@@ -159,11 +159,14 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## Step 4 — Catalog 설정 + Flink SQL Job 제출
+## Step 4 — Catalog 설정 + Flink SQL Job 제출 (Flink SQL Client)
+
+> **jshin Edge Node:** Apache Flink 1.20.1에서 `sql-client.sh`와 `flink-sql-client-*.jar`를 CSA parcel에 복사해 두었습니다.  
+> `FLINK_SUBMIT_BACKEND=sql-client`(`.env` 기본값)로 `./flink/run_*.sh` 실행 시 `flink-sql-client embedded -f ...` 로 제출됩니다.
 
 > **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.
 
-**사전:** `sql-client.sh` / `flink-sql-client*.jar`가 parcel에 없으면 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) 참고.
+### 4a. Job 제출 (권장)
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -171,7 +174,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd /path/to/KT_KDAP_Cloudera_PoC
 ```
 
-### 방법 A — Job별 실행 스크립트 (권장)
+**방법 A — Job별 스크립트 (권장)**
 
 | Job | 스크립트 | SQL 파일 |
 |-----|----------|----------|
@@ -181,51 +184,28 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 | **F-SGi-2** | `./flink/run_sgi_5min_v2.sh` | `sgi_5min_v2.sql` |
 | **F-MDT** | `./flink/run_mdt_5min.sh` | `mdt_5min.sql` |
 
-**F-LTAS (첫 번째 Job — 여기부터 시작):**
-
 ```
 ./flink/run_ltas_5min.sh
 ```
 
-**F-SGi-1 / F-SGi-2 / F-MDT (추가 Job):**
+**방법 B — flink-sql-client 직접 호출**
 
 ```
-./flink/run_sgi_5min_v1.sh
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
+  -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
+  -Djavax.net.ssl.trustStorePassword=changeit \
+  -Djavax.net.ssl.trustStoreType=JKS \
+  -f flink/conf/00_catalog_setup_jshin.sql \
+  -f flink/ltas_5min.sql
 ```
 
-```
-./flink/run_sgi_5min_v2.sh
-```
+Job 상태 확인:
 
 ```
-./flink/run_mdt_5min.sh
+/opt/cloudera/parcels/FLINK/bin/flink list
 ```
 
-### 방법 B — 수동 명령 (flink-sql-client)
-
-**F-LTAS:**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
-```
-
-**F-SGi-1:**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v1.sql
-```
-
-**F-SGi-2:**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
-```
-
-**F-MDT:**
-
-```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
-```
+또는 Cloudera Manager → Flink → **Web UI** → Running Jobs
 
 **Job 안에서 일어나는 일 (F-LTAS 예시):**
 
@@ -234,6 +214,24 @@ cd /path/to/KT_KDAP_Cloudera_PoC
 3. `rqt_st_dt` **45분대** 데이터만 필터 (`SUBSTR(..., 11, 2) = '45'`)
 4. **5분 구간**으로 묶어 SUM, COUNT
 5. 결과를 `ltas_5min_flink`에 저장
+
+### 4b. (대안) SSB REST API
+
+parcel bootstrap 없거나 sql-client 오류 시:
+
+```
+cp .env.example .env   # SSB_API_BASE 설정
+FLINK_SUBMIT_BACKEND=ssb ./flink/run_ltas_5min.sh
+```
+
+또는:
+
+```
+python3.11 scripts/ssb_submit_sql.py flink/ltas_5min.sql
+python3.11 scripts/ssb_submit_sql.py --list-jobs
+```
+
+SSB Web UI → **API Explorer**에서 Base URL 확인 (예: `https://<host>:8082/ssb/api/v1`)
 
 ---
 
@@ -291,16 +289,68 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## Flink SQL Client 보완 (CSA parcel)
+## Flink SQL Client — CSA parcel 보완 (jshin Edge Node 적용 완료)
 
-jshin parcel에 `lib/flink/bin/sql-client.sh` 및 `flink-sql-client*.jar`가 없으면 Apache Flink **1.20.1** binary에서 복사:
+CSA parcel에는 `lib/flink/bin/sql-client.sh`와 `flink-sql-client*.jar`가 **기본 포함되지 않습니다**.  
+Apache Flink **1.20.1** (CSA와 동일 버전)에서 아래 파일을 복사합니다.
+
+### jshin Edge Node — 수동 복사 (적용 완료)
 
 ```
-cp flink-1.20.1/bin/sql-client.sh /opt/cloudera/parcels/FLINK/lib/flink/bin/
-cp flink-1.20.1/opt/flink-sql-client-*.jar /opt/cloudera/parcels/FLINK/lib/flink/opt/
-cp flink-1.20.1/opt/flink-sql-gateway-*.jar /opt/cloudera/parcels/FLINK/lib/flink/opt/
-chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
+CSA_FLINK=/opt/cloudera/parcels/FLINK-1.20.1-csa1.17.1.0-81475796/lib/flink
+cp ~/flink-1.20.1/bin/sql-client.sh $CSA_FLINK/bin/
+chmod +x $CSA_FLINK/bin/sql-client.sh
+chown flink:flink $CSA_FLINK/bin/sql-client.sh
+cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
+chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar
 ```
+
+| Apache Flink 원본 | parcel 대상 |
+|-------------------|-------------|
+| `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
+| `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
+
+확인:
+
+```
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help
+```
+
+### bootstrap 스크립트 (다른 Edge Node / 재설치 시)
+
+Apache Flink 1.20.1 다운로드:
+
+```
+curl -LO https://archive.apache.org/dist/flink/flink-1.20.1/flink-1.20.1-bin-scala_2.12.tgz
+tar xzf flink-1.20.1-bin-scala_2.12.tgz
+```
+
+**방법 A — parcel 직접 (jshin과 동일 레이아웃, root):**
+
+```
+sudo ./scripts/bootstrap_flink_sql_client.sh ~/flink-1.20.1 --target parcel
+```
+
+**방법 B — repo vendor (root 불필요, parcel JAR은 CSA 그대로 사용):**
+
+```
+./scripts/bootstrap_flink_sql_client.sh ~/flink-1.20.1 --target vendor
+```
+
+| Apache Flink | vendor 경로 |
+|--------------|-------------|
+| `bin/sql-client.sh` | `flink/vendor/apache-flink-1.20.1/bin/` |
+| `opt/flink-sql-client-*.jar` | `flink/vendor/apache-flink-1.20.1/opt/` |
+
+### SQL Job 실행
+
+```
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+./flink/run_ltas_5min.sh
+```
+
+`FLINK_SUBMIT_BACKEND=auto`이면 parcel bootstrap 여부에 따라 sql-client / SSB 자동 선택.
 
 ---
 
@@ -314,7 +364,9 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 | 결과 0건 | 윈도우 미완료 | 5~6분 더 대기 |
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
-| SQL Client 실패 | `sql-client.sh` 없음 | 위 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) |
+| SQL Client 실패 | parcel bootstrap 미적용 | jshin 수동 복사 또는 `bootstrap_flink_sql_client.sh --target parcel` |
+| SQL Client 실패 | Kerberos / SSL | `kinit` 재실행, trustStore JVM 옵션 확인 |
+| SSB 401/403 | Kerberos 만료 / project | `kinit` 재실행, `SSB_PROJECT_ID` 확인 (`FLINK_SUBMIT_BACKEND=ssb`) |
 
 ---
 
@@ -327,7 +379,9 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 | 환경 설정 | [docs/runbooks/env-setup.md](../docs/runbooks/env-setup.md) |
 | SDV 대용량 데이터 | [sdv/README.md](../sdv/README.md) |
 | Catalog SQL | [flink/conf/00_catalog_setup_jshin.sql](conf/00_catalog_setup_jshin.sql) |
-| SQL Job 제출 | [flink/bin/submit_flink_sql.sh](bin/submit_flink_sql.sh) |
+| SSB SQL 제출 | [scripts/ssb_submit_sql.py](../scripts/ssb_submit_sql.py) |
+| SQL Client bootstrap | [scripts/bootstrap_flink_sql_client.sh](../scripts/bootstrap_flink_sql_client.sh) |
+| SQL Job wrapper | [flink/bin/submit_flink_sql.sh](bin/submit_flink_sql.sh) |
 | Job 실행 스크립트 | `flink/run_*.sh` (ltas, sgi v1/v2, mdt, catalog) |
 | 테이블 DDL | [flink/cdp-test/impala_01_create_tables.sql](cdp-test/impala_01_create_tables.sql) |
 | 샘플 데이터 | [flink/cdp-test/impala_02_sample_data.sql](cdp-test/impala_02_sample_data.sql) |
