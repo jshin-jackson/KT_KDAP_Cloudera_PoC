@@ -195,7 +195,7 @@ cd /path/to/KT_KDAP_Cloudera_PoC
   -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
   -Djavax.net.ssl.trustStorePassword=changeit \
   -Djavax.net.ssl.trustStoreType=JKS \
-  -f flink/conf/00_catalog_setup_jshin.sql \
+  -i flink/conf/00_catalog_setup_jshin.sql \
   -f flink/ltas_5min.sql
 ```
 
@@ -303,7 +303,13 @@ chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar
+# Hive connector — Flink binary tarball에 없음, Maven에서 별도 다운로드
+curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar
+cp flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar $CSA_FLINK/lib/
+# Iceberg: Flink 1.20용 (1.18 JAR는 교체 권장)
+find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'
+cp /path/to/iceberg-flink-runtime-1.20-*.jar $CSA_FLINK/lib/
+chown flink:flink $CSA_FLINK/lib/flink-sql-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
 
 | Apache Flink 원본 | parcel 대상 |
@@ -311,6 +317,13 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql
 | `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
 | `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
 | `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
+| `flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar` (Maven) | `$CSA_FLINK/lib/` |
+| `iceberg-flink-runtime-1.20-*.jar` | `$CSA_FLINK/lib/iceberg-flink-runtime-*.jar` |
+
+> **Hive connector:** `flink-1.20.1-bin-scala_2.12.tgz`에는 **포함되지 않음**. Maven에서 별도 다운로드.
+
+> **Iceberg catalog:** Flink 1.16+ embedded SQL Client는 `iceberg-flink-runtime` JAR가 **`lib/`** 에 있어야 `CREATE CATALOG ... type=iceberg` 가 동작합니다.  
+> parcel에 없으면 `find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'` 로 검색 후 복사하거나 Maven에서 내려받습니다.
 
 확인:
 
@@ -367,6 +380,12 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | 결과 0건 | 윈도우 미완료 | 5~6분 더 대기 |
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
+| Catalog 오류 | `Could not find factory iceberg` | `iceberg-flink-runtime-1.20-*.jar` → `$CSA_FLINK/lib/` |
+| Catalog 오류 | `NoSuchObjectException` (HiveCatalog) | Maven에서 `flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar` → `$CSA_FLINK/lib/` |
+| Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_CONF_DIR=/etc/hadoop/conf` + `HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive` |
+| Job 미제출 | `-f` 두 파일 지정 | Flink는 **첫 `-f`만** 실행 — catalog는 `-i`, job은 `-f` (`./flink/run_ltas_5min.sh` 권장) |
+| CREATE TABLE 실패 | `connector=iceberg` in iceberg catalog | init 후 `USE CATALOG default_catalog` — connector DDL은 default catalog에 생성 |
+| Catalog 오류 | Hive client 버전 불일치 | CDH Hive client 사용 또는 **SSB** (`FLINK_SUBMIT_BACKEND=ssb`) |
 | SQL Client 실패 | gateway JAR 누락 (`DefaultContext`) | `flink-sql-gateway-*.jar` 도 `$CSA_FLINK/lib/`에 복사 |
 | SQL Client 실패 | parcel bootstrap 미적용 | jshin 수동 복사 또는 `bootstrap_flink_sql_client.sh --target parcel` |
 | SQL Client 실패 | Kerberos / SSL | `kinit` 재실행, trustStore JVM 옵션 확인 |

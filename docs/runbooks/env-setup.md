@@ -80,7 +80,7 @@ jshin Edge Node: Apache Flink 1.20.1 SQL Client가 CSA parcel에 복사됨 (`lib
 **직접 호출 (Auto-TLS truststore 포함):**
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 ## 다음 단계

@@ -38,7 +38,7 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 ---
@@ -187,25 +187,25 @@ Flink Gateway 노드에서 SQL Client 실행:
 ### 7-1. F-LTAS (LTAS 5분 집계) — jshin
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 ### 7-2. F-SGi-1 (SGi 5분 집계 v1)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v1.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -i flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v1.sql
 ```
 
 ### 7-3. F-SGi-2 (SGi 5분 집계 v2)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v2.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -i flink/conf/00_catalog_setup.sql -f flink/sgi_5min_v2.sql
 ```
 
 ### 7-4. F-MDT (MDT 5분 집계)
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -f flink/conf/00_catalog_setup.sql -f flink/mdt_5min.sql
+/opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -i flink/conf/00_catalog_setup.sql -f flink/mdt_5min.sql
 ```
 
 > Job이 `RUNNING` 상태로 유지되면 정상입니다. INSERT INTO streaming job 은 종료하지 않습니다.

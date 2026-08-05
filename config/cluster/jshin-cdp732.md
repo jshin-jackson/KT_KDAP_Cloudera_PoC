@@ -122,7 +122,9 @@ chmod +x $CSA_FLINK/bin/sql-client.sh
 chown flink:flink $CSA_FLINK/bin/sql-client.sh
 cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar
+curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar
+cp flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar $CSA_FLINK/lib/
+chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar
 ```
 
 | Apache Flink 원본 | parcel 대상 |
@@ -130,6 +132,7 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql
 | `bin/sql-client.sh` | `$CSA_FLINK/bin/sql-client.sh` |
 | `opt/flink-sql-client-*.jar` | `$CSA_FLINK/lib/flink-sql-client-*.jar` |
 | `opt/flink-sql-gateway-*.jar` | `$CSA_FLINK/lib/flink-sql-gateway-*.jar` |
+| `iceberg-flink-runtime-1.20-*.jar` | `$CSA_FLINK/lib/iceberg-flink-runtime-*.jar` |
 
 확인: `/opt/cloudera/parcels/FLINK/bin/flink-sql-client --help`
 
@@ -137,18 +140,21 @@ chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
+export HIVE_CONF_DIR=/etc/hadoop/conf
+export HIVE_HOME=/opt/cloudera/parcels/CDH/lib/hive
+export HADOOP_CLASSPATH=$(hadoop classpath)
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 cd ~/KT_KDAP_Cloudera_PoC
 ./flink/run_ltas_5min.sh
 ```
 
-직접 호출:
+직접 호출 (`-i` catalog, `-f` job — `-f` 두 번 쓰면 첫 파일만 실행됨):
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
   -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
   -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
-  -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+  -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
 
 ### PoC 실행 순서 (SSB — 대안)

@@ -8,7 +8,10 @@
 #   chown flink:flink $CSA_FLINK/bin/sql-client.sh
 #   cp ~/flink-1.20.1/opt/flink-sql-client-1.20.1.jar $CSA_FLINK/lib/
 #   cp ~/flink-1.20.1/opt/flink-sql-gateway-1.20.1.jar $CSA_FLINK/lib/
-#   chown flink:flink $CSA_FLINK/lib/flink-sql-client-*.jar $CSA_FLINK/lib/flink-sql-gateway-*.jar
+#   curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/1.20.1/flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar
+#   cp flink-sql-connector-hive-3.1.3_2.12-1.20.1.jar $CSA_FLINK/lib/   # HiveCatalog (Maven — tarball에 없음)
+#   cp ~/iceberg-flink-runtime-1.20-*.jar $CSA_FLINK/lib/                   # Iceberg (Flink 1.20용)
+#   chown flink:flink $CSA_FLINK/lib/flink-sql-*.jar $CSA_FLINK/lib/iceberg-flink-runtime-*.jar $CSA_FLINK/lib/flink-sql-connector-hive-*.jar
 #
 # Or use this script:
 #   ./scripts/bootstrap_flink_sql_client.sh ~/flink-1.20.1 --target parcel
@@ -74,12 +77,93 @@ require_file "${APACHE_HOME}/bin/sql-client.sh"
 require_file "${APACHE_HOME}/opt/flink-sql-client-"*.jar
 require_file "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar
 
+copy_optional_jar_glob() {
+  local pattern="$1"
+  local dest_lib="$2"
+  local label="$3"
+  local prefix="${pattern##*/}"
+  prefix="${prefix%%\**}"
+  if compgen -G "${dest_lib}/${prefix}"*.jar >/dev/null; then
+    return 0
+  fi
+  if compgen -G "${pattern}" >/dev/null; then
+    cp -f ${pattern} "${dest_lib}/"
+    echo "Copied ${label}: ${dest_lib}/$(basename ${pattern})"
+    return 0
+  fi
+  echo "WARN: ${label} not found (${pattern})" >&2
+  return 1
+}
+
+find_iceberg_jar() {
+  local candidate=""
+  if [[ -n "${ICEBERG_JAR:-}" && -f "${ICEBERG_JAR}" ]]; then
+    echo "${ICEBERG_JAR}"
+    return 0
+  fi
+  candidate="$(find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar' 2>/dev/null | head -1 || true)"
+  if [[ -n "$candidate" && -f "$candidate" ]]; then
+    echo "$candidate"
+    return 0
+  fi
+  candidate="$(find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.18-*.jar' 2>/dev/null | head -1 || true)"
+  if [[ -n "$candidate" && -f "$candidate" ]]; then
+    echo "WARN: using ${candidate} — prefer iceberg-flink-runtime-1.20-* for Flink ${FLINK_VERSION}" >&2
+    echo "$candidate"
+    return 0
+  fi
+  return 1
+}
+
+copy_iceberg_jar() {
+  local dest_lib="$1"
+  local iceberg_jar
+  if compgen -G "${dest_lib}/iceberg-flink-runtime-"*.jar >/dev/null; then
+    echo "Iceberg runtime already present in ${dest_lib}"
+    return 0
+  fi
+  if ! iceberg_jar="$(find_iceberg_jar)"; then
+    echo "WARN: iceberg-flink-runtime-1.20-*.jar not found on this host." >&2
+    echo "  Search: find /opt/cloudera/parcels -name 'iceberg-flink-runtime-1.20-*.jar'" >&2
+    echo "  Or download (example): curl -LO https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.20/1.7.2/iceberg-flink-runtime-1.20-1.7.2.jar" >&2
+    echo "  Then: ICEBERG_JAR=/path/to/iceberg-flink-runtime-1.20-*.jar $0 ... --target parcel" >&2
+    return 1
+  fi
+  cp -f "$iceberg_jar" "${dest_lib}/"
+  echo "Copied Iceberg runtime: ${dest_lib}/$(basename "$iceberg_jar")"
+}
+
+copy_hive_connector_jar() {
+  local dest_lib="$1"
+  local hive_jar hive_url
+  if compgen -G "${dest_lib}/flink-sql-connector-hive-"*.jar >/dev/null; then
+    echo "Hive connector already present in ${dest_lib}"
+    return 0
+  fi
+  if copy_optional_jar_glob "${APACHE_HOME}/opt/flink-sql-connector-hive-"*.jar "${dest_lib}" "Hive SQL connector"; then
+    return 0
+  fi
+  # Not bundled in flink-*-bin-scala_2.12.tgz — download from Maven Central
+  hive_url="https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.3_2.12/${FLINK_VERSION}/flink-sql-connector-hive-3.1.3_2.12-${FLINK_VERSION}.jar"
+  hive_jar="${dest_lib}/flink-sql-connector-hive-3.1.3_2.12-${FLINK_VERSION}.jar"
+  echo "Downloading Hive SQL connector (not in Flink binary tarball)..."
+  if curl -fsSL -o "${hive_jar}" "${hive_url}"; then
+    echo "Downloaded Hive connector: ${hive_jar}"
+    return 0
+  fi
+  echo "WARN: failed to download ${hive_url}" >&2
+  echo "  Manual: curl -LO ${hive_url} && cp flink-sql-connector-hive-*.jar ${dest_lib}/" >&2
+  return 1
+}
+
 install_vendor() {
   local dest="${REPO_ROOT}/flink/vendor/apache-flink-${FLINK_VERSION}"
   mkdir -p "${dest}/bin" "${dest}/opt"
   cp -f "${APACHE_HOME}/bin/sql-client.sh" "${dest}/bin/"
   cp -f "${APACHE_HOME}/opt/flink-sql-client-"*.jar "${dest}/opt/"
   cp -f "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar "${dest}/opt/"
+  copy_iceberg_jar "${dest}/opt" || true
+  copy_hive_connector_jar "${dest}/opt" || true
   chmod +x "${dest}/bin/sql-client.sh"
   echo "Installed vendor SQL Client:"
   echo "  ${dest}/bin/sql-client.sh"
@@ -95,16 +179,22 @@ install_parcel() {
   cp -f "${APACHE_HOME}/bin/sql-client.sh" "${dest_bin}/"
   cp -f "${APACHE_HOME}/opt/flink-sql-client-"*.jar "${dest_lib}/"
   cp -f "${APACHE_HOME}/opt/flink-sql-gateway-"*.jar "${dest_lib}/"
+  copy_iceberg_jar "${dest_lib}" || true
+  copy_hive_connector_jar "${dest_lib}" || true
   chmod +x "${dest_bin}/sql-client.sh"
   if id flink &>/dev/null; then
     chown flink:flink "${dest_bin}/sql-client.sh" \
       "${dest_lib}/flink-sql-client-"*.jar \
-      "${dest_lib}/flink-sql-gateway-"*.jar 2>/dev/null || true
+      "${dest_lib}/flink-sql-gateway-"*.jar \
+      "${dest_lib}/iceberg-flink-runtime-"*.jar \
+      "${dest_lib}/flink-sql-connector-hive-"*.jar 2>/dev/null || true
   fi
   echo "Installed into CSA parcel (jshin layout):"
   echo "  CSA_FLINK=${parcel_root}/lib/flink"
   echo "  ${dest_bin}/sql-client.sh"
-  ls -la "${dest_lib}/flink-sql-client-"*.jar "${dest_lib}/flink-sql-gateway-"*.jar
+  ls -la "${dest_lib}/flink-sql-client-"*.jar "${dest_lib}/flink-sql-gateway-"*.jar 2>/dev/null || true
+  ls -la "${dest_lib}/iceberg-flink-runtime-"*.jar "${dest_lib}/flink-sql-connector-hive-"*.jar 2>/dev/null \
+    || echo "  (iceberg and/or hive connector missing — CREATE CATALOG iceberg+hive may fail)"
   echo ""
   echo "Test:"
   echo "  /opt/cloudera/parcels/FLINK/bin/flink-sql-client --help"

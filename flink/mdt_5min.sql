@@ -10,11 +10,14 @@
 --   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
 --     -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
 --     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
---     -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
+--     -i flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
 -- Fallback (SSB):
 --   FLINK_SUBMIT_BACKEND=ssb ./flink/run_mdt_5min.sh
 
 SET 'execution.runtime-mode' = 'streaming';
+
+USE CATALOG default_catalog;
+USE default_database;
 
 CREATE TABLE cdr_mdt_stream (
   mdt_id       STRING,

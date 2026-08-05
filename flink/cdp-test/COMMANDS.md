@@ -113,7 +113,7 @@ cd /path/to/KT_KDAP_Cloudera_PoC
   -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
   -Djavax.net.ssl.trustStorePassword=changeit \
   -Djavax.net.ssl.trustStoreType=JKS \
-  -f flink/conf/00_catalog_setup_jshin.sql \
+  -i flink/conf/00_catalog_setup_jshin.sql \
   -f flink/ltas_5min.sql
 ```
 

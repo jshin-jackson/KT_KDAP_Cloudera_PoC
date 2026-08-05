@@ -20,9 +20,13 @@ CREATE CATALOG IF NOT EXISTS iceberg_hive_catalog WITH (
   'catalog-type'     = 'hive',
   'uri'              = 'thrift://ccycloud-1.jshin.root.comops.site:9083,thrift://ccycloud-3.jshin.root.comops.site:9083',
   'warehouse'        = 'hdfs://ns1/user/hive/warehouse',
+  'hive-conf-dir'    = '/etc/hadoop/conf',
+  'hadoop-conf-dir'  = '/etc/hadoop/conf',
   'clients'          = '5',
   'property-version' = '1'
 );
 
 USE CATALOG iceberg_hive_catalog;
 USE kdap;
+-- Job SQL (-f) 은 default_catalog 로 전환 후 connector 테이블을 생성합니다.
+-- iceberg catalog 안에서 'connector'='iceberg' DDL 은 허용되지 않습니다.

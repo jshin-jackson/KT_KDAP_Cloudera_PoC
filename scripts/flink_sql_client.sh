@@ -5,7 +5,7 @@
 #   ./scripts/bootstrap_flink_sql_client.sh /path/to/flink-1.20.1
 #
 # Usage (from repo root):
-#   ./scripts/flink_sql_client.sh embedded -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
+#   ./scripts/flink_sql_client.sh embedded -i flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 #   ./scripts/flink_sql_client.sh flink list
 
 set -euo pipefail
