@@ -1,5 +1,17 @@
 -- Scenario 2: MDT real-time 5-min TUMBLE
 -- Source: MDT_DW.TRD_CDR_MDT_SMSNG_M1 via Iceberg streaming
+--
+-- Run (jshin, repo root):
+--   export HADOOP_CONF_DIR=/etc/hadoop/conf
+--   kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+--   ./flink/run_mdt_5min.sh
+--
+-- Manual (YARN session + SQL):
+--   /opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
+--   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
+--     -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
+--     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
+--     -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
 
 SET 'execution.runtime-mode' = 'streaming';
 

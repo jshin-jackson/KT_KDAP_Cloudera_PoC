@@ -159,52 +159,72 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 
 ---
 
-## Step 4 — YARN Session 시작 (1회)
+## Step 4+5 — Flink YARN Session + SQL Job 제출
 
 > **Tip:** Job은 `INSERT INTO ... SELECT ...` 형태라서 제출 후 **RUNNING** 상태가 정상입니다.  
-> YARN session을 **먼저 detached로 띄운 뒤**, SQL Client로 job을 제출합니다.
+> 각 SQL은 **`flink-yarn-session`으로 session을 띄운 뒤** SQL Client로 제출합니다.
 
 **사전:** `sql-client.sh` / `flink-sql-client*.jar`가 parcel에 없으면 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) 참고.
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
 kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+cd /path/to/KT_KDAP_Cloudera_PoC
+```
+
+### 방법 A — Job별 실행 스크립트 (권장)
+
+스크립트가 Flink YARN session이 없으면 자동으로 `flink-yarn-session -d`를 실행한 뒤 SQL을 제출합니다.
+
+| Job | 스크립트 | SQL 파일 |
+|-----|----------|----------|
+| Catalog | `./flink/run_catalog_setup.sh` | `conf/00_catalog_setup_jshin.sql` |
+| **F-LTAS** | `./flink/run_ltas_5min.sh` | `ltas_5min.sql` |
+| **F-SGi-1** | `./flink/run_sgi_5min_v1.sh` | `sgi_5min_v1.sql` |
+| **F-SGi-2** | `./flink/run_sgi_5min_v2.sh` | `sgi_5min_v2.sql` |
+| **F-MDT** | `./flink/run_mdt_5min.sh` | `mdt_5min.sql` |
+
+**F-LTAS (첫 번째 Job — 여기부터 시작):**
+
+```
+./flink/run_ltas_5min.sh
+```
+
+**F-SGi-1 / F-SGi-2 / F-MDT (YARN session 유지, 스크립트만 추가 실행):**
+
+```
+./flink/run_sgi_5min_v1.sh
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -nm sbi-flink-sql -s 2 -tm 2048
+./flink/run_sgi_5min_v2.sh
 ```
 
-YARN Application **RUNNING** 확인:
-
 ```
-yarn application -list | grep sbi-flink-sql
+./flink/run_mdt_5min.sh
 ```
 
----
+### 방법 B — 수동 명령 (Job별)
 
-## Step 5 — Flink SQL Job 제출 (Catalog + LTAS)
+**1) YARN Session (1회, 또는 session 종료 후 재실행):**
 
-YARN session(`sbi-flink-sql`)이 떠 있는 **같은 edge 노드**에서 실행합니다.  
-(`.yarn-properties`가 생성되어 있어야 SQL Client가 session에 붙습니다.)
+```
+/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
+```
 
-### F-LTAS (첫 번째 Job — 여기부터 시작)
+```
+yarn application -list | grep -i flink
+```
+
+YARN Application 이름은 기본값 **`Flink session cluster`** 입니다 (`-nm` 옵션 없음).
+
+**2) SQL Job 제출** — YARN session이 떠 있는 **같은 edge 노드**에서 실행 (`.yarn-properties` 필요):
+
+**F-LTAS:**
 
 ```
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/ltas_5min.sql
 ```
-
-**Job 안에서 일어나는 일 (쉬운 설명):**
-
-1. `cdr_sgi_raw`에서 **새 데이터**를 계속 읽음 (Iceberg streaming)
-2. `bts_master`와 JOIN → 기지국/지역 정보 붙임
-3. `rqt_st_dt` **45분대** 데이터만 필터 (`SUBSTR(..., 11, 2) = '45'`)
-4. **5분 구간**으로 묶어 SUM, COUNT
-5. 결과를 `ltas_5min_flink`에 저장
-
-### F-SGi-1 / F-SGi-2 / F-MDT (추가 Job)
-
-**YARN session은 재시작하지 않습니다.** `kinit` 후 SQL Client만 다시 실행합니다.
 
 **F-SGi-1:**
 
@@ -223,6 +243,14 @@ YARN session(`sbi-flink-sql`)이 떠 있는 **같은 edge 노드**에서 실행�
 ```
 /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS -f flink/conf/00_catalog_setup_jshin.sql -f flink/mdt_5min.sql
 ```
+
+**Job 안에서 일어나는 일 (F-LTAS 예시):**
+
+1. `cdr_sgi_raw`에서 **새 데이터**를 계속 읽음 (Iceberg streaming)
+2. `bts_master`와 JOIN → 기지국/지역 정보 붙임
+3. `rqt_st_dt` **45분대** 데이터만 필터 (`SUBSTR(..., 11, 2) = '45'`)
+4. **5분 구간**으로 묶어 SUM, COUNT
+5. 결과를 `ltas_5min_flink`에 저장
 
 ---
 
@@ -276,10 +304,10 @@ impala-shell -i ccycloud-5.jshin.root.comops.site:25003 --protocol=beeswax -d de
 /opt/cloudera/parcels/FLINK/bin/flink cancel <JOB_ID>
 ```
 
-**YARN session 종료 (`sbi-flink-sql`):**
+**YARN session 종료:**
 
 ```
-yarn application -list | grep sbi-flink-sql
+yarn application -list | grep -i flink
 yarn application -kill <application_id>
 ```
 
@@ -311,7 +339,7 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | SQL Client 실패 | `sql-client.sh` 없음 | 위 [Flink SQL Client 보완](#flink-sql-client-보완-csa-parcel) |
-| Job 제출 실패 | YARN session 없음 | `flink-yarn-session -d -nm sbi-flink-sql ...` 재실행 |
+| Job 제출 실패 | YARN session 없음 | `flink-yarn-session -d -s 2 -tm 2048` 재실행 |
 
 ---
 
@@ -324,6 +352,9 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 | 환경 설정 | [docs/runbooks/env-setup.md](../docs/runbooks/env-setup.md) |
 | SDV 대용량 데이터 | [sdv/README.md](../sdv/README.md) |
 | Catalog SQL | [flink/conf/00_catalog_setup_jshin.sql](conf/00_catalog_setup_jshin.sql) |
+| YARN session 시작 | [flink/bin/start_yarn_session.sh](bin/start_yarn_session.sh) |
+| SQL Job 제출 | [flink/bin/submit_flink_sql.sh](bin/submit_flink_sql.sh) |
+| Job 실행 스크립트 | `flink/run_*.sh` (ltas, sgi v1/v2, mdt, catalog) |
 | 테이블 DDL | [flink/cdp-test/impala_01_create_tables.sql](cdp-test/impala_01_create_tables.sql) |
 | 샘플 데이터 | [flink/cdp-test/impala_02_sample_data.sql](cdp-test/impala_02_sample_data.sql) |
 | 결과 검증 | [flink/cdp-test/impala_03_validate.sql](cdp-test/impala_03_validate.sql) |
@@ -334,7 +365,7 @@ chmod +x /opt/cloudera/parcels/FLINK/lib/flink/bin/sql-client.sh
 
 1. **Step 1~2** — 로그인 + 테이블 생성 (Impala만 사용, Flink 없음)
 2. **Step 3 방법 A** — 샘플 6건 넣기
-3. **Step 4+5 F-LTAS만** — Job 1개 실행
+3. **Step 4+5 F-LTAS만** — `./flink/run_ltas_5min.sh` (YARN session + SQL)
 4. **Step 6** — 5분 후 결과 확인
 5. **Step 7** — 데이터 추가 후 결과 변화 관찰
 6. **F-SGi, F-MDT** — Job 3개 추가

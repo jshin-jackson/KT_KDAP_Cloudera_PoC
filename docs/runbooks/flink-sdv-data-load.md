@@ -157,11 +157,11 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 ```
 
 ```
-/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -nm sbi-flink-sql -s 2 -tm 2048
+/opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
 ```
 
 ```
-yarn application -list | grep sbi-flink-sql
+yarn application -list | grep -i flink
 ```
 
 ### 5b. SQL Job (LTAS)

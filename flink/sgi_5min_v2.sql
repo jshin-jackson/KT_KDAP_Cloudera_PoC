@@ -1,5 +1,17 @@
 -- Scenario 2: SGi real-time 5-min TUMBLE (Variant 2 — maps to WF_M07046 v2)
 -- Sink: sgi_5min_flink_v2 (v1 과 별도 테이블)
+--
+-- Run (jshin, repo root):
+--   export HADOOP_CONF_DIR=/etc/hadoop/conf
+--   kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
+--   ./flink/run_sgi_5min_v2.sh
+--
+-- Manual (YARN session + SQL):
+--   /opt/cloudera/parcels/FLINK/bin/flink-yarn-session -d -s 2 -tm 2048
+--   /opt/cloudera/parcels/FLINK/bin/flink-sql-client embedded \
+--     -Djavax.net.ssl.trustStore=/var/lib/cloudera-scm-agent/agent/cert/cm-auto-global_cacerts.jks \
+--     -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=JKS \
+--     -f flink/conf/00_catalog_setup_jshin.sql -f flink/sgi_5min_v2.sql
 
 SET 'execution.runtime-mode' = 'streaming';
 SET 'table.exec.state.ttl' = '1 h';
