@@ -64,6 +64,14 @@ CREATE TABLE sgi_5min_sink (
   'catalog-table' = 'sgi_5min_flink'
 );
 
+CREATE TEMPORARY VIEW sgi_joined_v1 AS
+SELECT s.use_flag, s.val, s.event_time, b.bts_alt_key, b.region_cd
+FROM cdr_sgi_stream s
+LEFT JOIN bts_dim FOR SYSTEM_TIME AS OF s.event_time AS b
+  ON s.cell_id = b.cell_id OR s.alt_cell_id = b.alt_cell_id
+WHERE SUBSTRING(s.rqt_st_dt, 11, 2) = '45'
+  AND s.signal_type IN ('S1AP', 'SGI');
+
 INSERT INTO sgi_5min_sink
 SELECT
   window_start,
@@ -73,17 +81,6 @@ SELECT
   SUM(CASE WHEN use_flag = 'Y' THEN val ELSE 0 END) AS total_val,
   COUNT(*) AS record_cnt
 FROM TABLE(
-  TUMBLE(
-    TABLE (
-      SELECT s.use_flag, s.val, s.event_time, b.bts_alt_key, b.region_cd
-      FROM cdr_sgi_stream s
-      LEFT JOIN bts_dim FOR SYSTEM_TIME AS OF s.event_time AS b
-        ON s.cell_id = b.cell_id OR s.alt_cell_id = b.alt_cell_id
-      WHERE SUBSTRING(s.rqt_st_dt, 11, 2) = '45'
-        AND s.signal_type IN ('S1AP', 'SGI')
-    ),
-    DESCRIPTOR(event_time),
-    INTERVAL '5' MINUTE
-  )
+  TUMBLE(TABLE sgi_joined_v1, DESCRIPTOR(event_time), INTERVAL '5' MINUTE)
 )
 GROUP BY window_start, window_end, bts_alt_key, region_cd;

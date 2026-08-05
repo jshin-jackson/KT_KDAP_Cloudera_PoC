@@ -59,6 +59,13 @@ CREATE TABLE mdt_5min_sink (
   'catalog-table' = 'mdt_5min_flink'
 );
 
+CREATE TEMPORARY VIEW mdt_joined AS
+SELECT m.event_time, b.bts_alt_key
+FROM cdr_mdt_stream m
+LEFT JOIN bts_dim FOR SYSTEM_TIME AS OF m.event_time AS b
+  ON m.bts_market_nm = b.bts_market_nm
+WHERE SUBSTRING(m.rqt_st_dt, 11, 2) = '45';
+
 INSERT INTO mdt_5min_sink
 SELECT
   window_start,
@@ -66,16 +73,6 @@ SELECT
   bts_alt_key,
   COUNT(*) AS record_cnt
 FROM TABLE(
-  TUMBLE(
-    TABLE (
-      SELECT m.event_time, b.bts_alt_key
-      FROM cdr_mdt_stream m
-      LEFT JOIN bts_dim FOR SYSTEM_TIME AS OF m.event_time AS b
-        ON m.bts_market_nm = b.bts_market_nm
-      WHERE SUBSTRING(m.rqt_st_dt, 11, 2) = '45'
-    ),
-    DESCRIPTOR(event_time),
-    INTERVAL '5' MINUTE
-  )
+  TUMBLE(TABLE mdt_joined, DESCRIPTOR(event_time), INTERVAL '5' MINUTE)
 )
 GROUP BY window_start, window_end, bts_alt_key;

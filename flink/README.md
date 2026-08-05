@@ -386,6 +386,7 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | Catalog 오류 | `hive-site.xml under /etc/hadoop/conf` | catalog `hive-conf-dir` → `/opt/cloudera/parcels/CDH/lib/hive/conf` (not hadoop conf) |
 | Job 미제출 | `-f` 두 파일 지정 | Flink는 **첫 `-f`만** 실행 — catalog는 `-i`, job은 `-f` (`./flink/run_ltas_5min.sh` 권장) |
 | CREATE TABLE 실패 | `connector=iceberg` in iceberg catalog | init 후 `USE CATALOG default_catalog` — connector DDL은 default catalog에 생성 |
+| INSERT parse 오류 | `TABLE (SELECT ...)` in TUMBLE | Flink 1.20: join/filter는 `CREATE TEMPORARY VIEW` 후 `TUMBLE(TABLE view_name, ...)` |
 | Catalog 오류 | Hive client 버전 불일치 | CDH Hive client 사용 또는 **SSB** (`FLINK_SUBMIT_BACKEND=ssb`) |
 | SQL Client 실패 | gateway JAR 누락 (`DefaultContext`) | `flink-sql-gateway-*.jar` 도 `$CSA_FLINK/lib/`에 복사 |
 | SQL Client 실패 | parcel bootstrap 미적용 | jshin 수동 복사 또는 `bootstrap_flink_sql_client.sh --target parcel` |

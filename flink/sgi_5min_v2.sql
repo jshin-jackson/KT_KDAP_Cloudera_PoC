@@ -60,6 +60,16 @@ CREATE TABLE sgi_5min_sink_v2 (
   'catalog-table' = 'sgi_5min_flink_v2'
 );
 
+CREATE TEMPORARY VIEW sgi_joined_v2 AS
+SELECT
+  COALESCE(b.bts_alt_key, s.cell_id) AS bts_alt_key,
+  s.val,
+  s.event_time
+FROM cdr_sgi_stream s
+LEFT JOIN bts_dim_v2 FOR SYSTEM_TIME AS OF s.event_time AS b
+  ON s.cell_id = b.cell_id
+WHERE SUBSTRING(s.rqt_st_dt, 11, 2) = '45';
+
 INSERT INTO sgi_5min_sink_v2
 SELECT
   window_start,
@@ -68,19 +78,6 @@ SELECT
   SUM(val) AS total_val,
   COUNT(*) AS record_cnt
 FROM TABLE(
-  TUMBLE(
-    TABLE (
-      SELECT
-        COALESCE(b.bts_alt_key, s.cell_id) AS bts_alt_key,
-        s.val,
-        s.event_time
-      FROM cdr_sgi_stream s
-      LEFT JOIN bts_dim_v2 FOR SYSTEM_TIME AS OF s.event_time AS b
-        ON s.cell_id = b.cell_id
-      WHERE SUBSTRING(s.rqt_st_dt, 11, 2) = '45'
-    ),
-    DESCRIPTOR(event_time),
-    INTERVAL '5' MINUTE
-  )
+  TUMBLE(TABLE sgi_joined_v2, DESCRIPTOR(event_time), INTERVAL '5' MINUTE)
 )
 GROUP BY window_start, window_end, bts_alt_key;

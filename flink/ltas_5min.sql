@@ -65,6 +65,17 @@ CREATE TABLE ltas_5min_sink (
   'catalog-table' = 'ltas_5min_flink'
 );
 
+CREATE TEMPORARY VIEW ltas_joined AS
+SELECT
+  s.val,
+  s.event_time,
+  b.bts_alt_key,
+  b.region_cd
+FROM cdr_sgi_stream s
+LEFT JOIN bts_dim FOR SYSTEM_TIME AS OF s.event_time AS b
+  ON s.cell_id = b.cell_id
+WHERE SUBSTRING(s.rqt_st_dt, 11, 2) = '45';
+
 INSERT INTO ltas_5min_sink
 SELECT
   window_start,
@@ -74,20 +85,6 @@ SELECT
   SUM(val) AS total_val,
   COUNT(*) AS record_cnt
 FROM TABLE(
-  TUMBLE(
-    TABLE (
-      SELECT
-        s.val,
-        s.event_time,
-        b.bts_alt_key,
-        b.region_cd
-      FROM cdr_sgi_stream s
-      LEFT JOIN bts_dim FOR SYSTEM_TIME AS OF s.event_time AS b
-        ON s.cell_id = b.cell_id
-      WHERE SUBSTRING(s.rqt_st_dt, 11, 2) = '45'
-    ),
-    DESCRIPTOR(event_time),
-    INTERVAL '5' MINUTE
-  )
+  TUMBLE(TABLE ltas_joined, DESCRIPTOR(event_time), INTERVAL '5' MINUTE)
 )
 GROUP BY window_start, window_end, bts_alt_key, region_cd;
