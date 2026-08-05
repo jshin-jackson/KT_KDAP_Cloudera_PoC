@@ -379,8 +379,8 @@ kinit -kt /cdep/keytabs/systest.keytab systest@QE-INFRA-AD.CLOUDERA.COM
 | HDFS 오류 | nameservice | `export HADOOP_CONF_DIR=/etc/hadoop/conf` |
 | Catalog 오류 | HMS 연결 | `00_catalog_setup_jshin.sql` URI 확인 |
 | Catalog 오류 | `Could not find factory iceberg` | `iceberg-flink-runtime-1.20-*.jar` → `$CSA_FLINK/lib/` |
-| Catalog 오류 | `NoSuchObjectException` (HiveCatalog) | `HIVE_HOME` + `HIVE_CONF_DIR` + `HADOOP_CLASSPATH` — **not** flink-sql-connector-hive in lib/ |
-| INSERT 실패 | `NoSuchFieldError: operands` | `rm $CSA_FLINK/lib/flink-sql-connector-hive-*.jar` (Calcite conflict with planner) |
+| Catalog 오류 | `NoSuchObjectException` / HiveCatalog init | CDH Hive jars via `-j` (run_ltas_5min.sh) — **not** flink-sql-connector-hive in lib/ |
+| INSERT 실패 | `NoSuchFieldError: operands` | `rm $CSA_FLINK/lib/flink-sql-connector-hive-*.jar` (use CDH `-j` jars instead) |
 | Catalog 오류 | `TTransportException` / `set_ugi` | `HIVE_HOME` + `HIVE_CONF_DIR=${HIVE_HOME}/conf` (CDP: `.../CDH/lib/hive/conf`) |
 | Catalog 오류 | `hive-site.xml under /etc/hadoop/conf` | catalog `hive-conf-dir` → `/opt/cloudera/parcels/CDH/lib/hive/conf` (not hadoop conf) |
 | Job 미제출 | `-f` 두 파일 지정 | Flink는 **첫 `-f`만** 실행 — catalog는 `-i`, job은 `-f` (`./flink/run_ltas_5min.sh` 권장) |

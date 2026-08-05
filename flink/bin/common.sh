@@ -21,3 +21,23 @@ SSL_OPTS=(
   -Djavax.net.ssl.trustStorePassword=changeit
   -Djavax.net.ssl.trustStoreType=JKS
 )
+
+# CDH Hive jars for Iceberg HiveCatalog (embedded SQL Gateway classpath).
+# Do NOT use flink-sql-connector-hive in CSA lib/ — it bundles Calcite and breaks INSERT.
+collect_hive_metastore_jars() {
+  local hive_lib="${HIVE_HOME}/lib"
+  local patterns=(hive-exec-*.jar hive-metastore-*.jar hive-common-*.jar hive-serde-*.jar)
+  local pattern jar
+  HIVE_METASTORE_JARS=()
+  if [[ ! -d "$hive_lib" ]]; then
+    return 0
+  fi
+  shopt -s nullglob
+  for pattern in "${patterns[@]}"; do
+    for jar in "${hive_lib}/${pattern}"; do
+      HIVE_METASTORE_JARS+=("$jar")
+    done
+  done
+  shopt -u nullglob
+}
+collect_hive_metastore_jars

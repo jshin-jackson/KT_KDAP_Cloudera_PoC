@@ -72,6 +72,14 @@ if [[ "$BACKEND" == "sql-client" ]]; then
   # Flink SQL Client accepts only ONE -f file; multiple -f flags ignore all but the first.
   # Catalog + job: -i (init) for catalog DDL, -f for job SQL. Catalog-only: -f alone.
   CMD=("${SQL_CLIENT_BIN}" embedded "${SSL_OPTS[@]}")
+  if [[ ${#HIVE_METASTORE_JARS[@]} -gt 0 ]]; then
+    for jar in "${HIVE_METASTORE_JARS[@]}"; do
+      CMD+=(-j "$jar")
+    done
+  else
+    echo "WARN: no CDH Hive jars under ${HIVE_HOME}/lib — Iceberg Hive catalog may fail" >&2
+    echo "      Set HIVE_HOME or use FLINK_SUBMIT_BACKEND=ssb" >&2
+  fi
   catalog_sql=""
   job_files=()
   for sql in "${SQL_ARGS[@]}"; do
