@@ -253,7 +253,17 @@ def write_parquet(datasets: dict[str, pd.DataFrame], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     for name, df in datasets.items():
         path = output_dir / f"{name}.parquet"
-        df.to_parquet(path, index=False, engine="pyarrow")
+        out = df.copy()
+        if "event_time" in out.columns:
+            # Spark 3.x on CDP cannot read Parquet TIMESTAMP(NANOS) from pyarrow/pandas.
+            out["event_time"] = pd.to_datetime(out["event_time"]).dt.floor("us")
+        out.to_parquet(
+            path,
+            index=False,
+            engine="pyarrow",
+            coerce_timestamps="us",
+            allow_truncated_timestamps=True,
+        )
         print(f"  wrote {path} ({len(df):,} rows, {path.stat().st_size / 1024 / 1024:.1f} MB)")
 
 

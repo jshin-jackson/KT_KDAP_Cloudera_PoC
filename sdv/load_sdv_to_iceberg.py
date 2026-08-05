@@ -25,22 +25,58 @@ Interactive debugging — Iceberg configs must be set at startup (not via spark.
 
 Table qualifier must match the catalog name: spark_catalog.kdap.* (not iceberg.kdap.*).
 ccycloud-5 is Impala — not Hive Metastore (HMS: ccycloud-1, ccycloud-3).
+
+SDV Parquet event_time is often TIMESTAMP(NANOS) from pyarrow; Spark 3.x cannot infer it.
+This module reads event_time as INT64 and converts to timestamp (see read_sgi_raw/read_mdt_raw).
+Regenerate Parquet with coerce_timestamps=us to avoid the workaround.
 """
 
 from __future__ import annotations
 
 import argparse
 
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import expr
+from pyspark.sql.types import (
+    DoubleType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 ICEBERG_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 ICEBERG_CATALOG_CLASS = "org.apache.iceberg.spark.SparkCatalog"
 CATALOG_NAME = "spark_catalog"
 DEFAULT_WAREHOUSE = "hdfs://ns1/user/hive/warehouse"
-# jshin HA HMS (Impala is on ccycloud-5 — do not use for metastore)
 JSHIN_HMS_URI = (
     "thrift://ccycloud-1.jshin.root.comops.site:9083,"
     "thrift://ccycloud-3.jshin.root.comops.site:9083"
+)
+
+SGI_SCHEMA = StructType(
+    [
+        StructField("sgi_id", StringType(), True),
+        StructField("cell_id", StringType(), True),
+        StructField("alt_cell_id", StringType(), True),
+        StructField("rqt_st_dt", StringType(), True),
+        StructField("etl_date", StringType(), True),
+        StructField("val", LongType(), True),
+        StructField("use_flag", StringType(), True),
+        StructField("signal_type", StringType(), True),
+        StructField("event_time", LongType(), True),
+    ]
+)
+
+MDT_SCHEMA = StructType(
+    [
+        StructField("mdt_id", StringType(), True),
+        StructField("gnss_utmkx", DoubleType(), True),
+        StructField("gnss_utmky", DoubleType(), True),
+        StructField("rqt_st_dt", StringType(), True),
+        StructField("bts_market_nm", StringType(), True),
+        StructField("event_time", LongType(), True),
+    ]
 )
 
 
@@ -63,16 +99,37 @@ def table(name: str) -> str:
     return f"{CATALOG_NAME}.kdap.{name}"
 
 
+def _event_time_from_parquet_nanos(column: str) -> DataFrame:
+    return expr(f"timestamp_micros(cast({column} / 1000 as bigint))")
+
+
+def read_sgi_raw(spark: SparkSession, path: str) -> DataFrame:
+    return (
+        spark.read.schema(SGI_SCHEMA)
+        .parquet(path)
+        .withColumn("event_time", _event_time_from_parquet_nanos("event_time"))
+    )
+
+
+def read_mdt_raw(spark: SparkSession, path: str) -> DataFrame:
+    return (
+        spark.read.schema(MDT_SCHEMA)
+        .parquet(path)
+        .withColumn("event_time", _event_time_from_parquet_nanos("event_time"))
+    )
+
+
 def load_tables(spark: SparkSession, staging: str) -> None:
+    staging = staging.rstrip("/")
     spark.read.parquet(f"{staging}/bts_master.parquet").writeTo(
         table("bts_master")
     ).overwritePartitions()
 
-    spark.read.parquet(f"{staging}/cdr_sgi_raw.parquet").writeTo(
+    read_sgi_raw(spark, f"{staging}/cdr_sgi_raw.parquet").writeTo(
         table("cdr_sgi_raw")
     ).append()
 
-    spark.read.parquet(f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo(
+    read_mdt_raw(spark, f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo(
         table("cdr_mdt_smsng_raw")
     ).append()
 

@@ -93,11 +93,35 @@ hive-site.xml이 없거나 URI를 명시해야 할 때만 추가:
 ```
 
 ```python
+from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType
+from pyspark.sql.functions import expr
+
 staging = "hdfs://ns1/user/kdap/staging/sdv"
 spark.read.parquet(f"{staging}/bts_master.parquet").writeTo("spark_catalog.kdap.bts_master").overwritePartitions()
-spark.read.parquet(f"{staging}/cdr_sgi_raw.parquet").writeTo("spark_catalog.kdap.cdr_sgi_raw").append()
-spark.read.parquet(f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo("spark_catalog.kdap.cdr_mdt_smsng_raw").append()
+
+sgi_schema = StructType([
+    StructField("sgi_id", StringType()), StructField("cell_id", StringType()),
+    StructField("alt_cell_id", StringType()), StructField("rqt_st_dt", StringType()),
+    StructField("etl_date", StringType()), StructField("val", LongType()),
+    StructField("use_flag", StringType()), StructField("signal_type", StringType()),
+    StructField("event_time", LongType()),  # pyarrow NANOS → Spark cannot infer; read as INT64
+])
+spark.read.schema(sgi_schema).parquet(f"{staging}/cdr_sgi_raw.parquet") \
+    .withColumn("event_time", expr("timestamp_micros(cast(event_time / 1000 as bigint))")) \
+    .writeTo("spark_catalog.kdap.cdr_sgi_raw").append()
+
+mdt_schema = StructType([
+    StructField("mdt_id", StringType()), StructField("gnss_utmkx", DoubleType()),
+    StructField("gnss_utmky", DoubleType()), StructField("rqt_st_dt", StringType()),
+    StructField("bts_market_nm", StringType()), StructField("event_time", LongType()),
+])
+spark.read.schema(mdt_schema).parquet(f"{staging}/cdr_mdt_smsng_raw.parquet") \
+    .withColumn("event_time", expr("timestamp_micros(cast(event_time / 1000 as bigint))")) \
+    .writeTo("spark_catalog.kdap.cdr_mdt_smsng_raw").append()
 ```
+
+> **Parquet TIMESTAMP(NANOS):** SDV/pyarrow 기본 출력은 Spark 3.x에서 `Illegal Parquet type` 오류를 유발합니다.  
+> 위처럼 `event_time`을 `LongType`으로 읽어 변환하거나, Parquet를 `coerce_timestamps=us`로 **재생성**하세요.
 
 Impala 메타데이터 갱신:
 
