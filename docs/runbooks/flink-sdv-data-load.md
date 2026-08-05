@@ -64,7 +64,8 @@ spark-submit --driver-memory 4g --executor-memory 8g --num-executors 4 sdv/load_
 
 스크립트: [`sdv/load_sdv_to_iceberg.py`](../../sdv/load_sdv_to_iceberg.py)
 
-대화형으로 실행하려면 Iceberg `--conf`를 **pyspark 시작 시** 넘긴 뒤 적재 코드만 붙여넣습니다:
+대화형으로 실행하려면 Iceberg `--conf`를 **pyspark 시작 시** 넘긴 뒤 적재 코드만 붙여넣습니다  
+(catalog 이름 `spark_catalog` — `iceberg.kdap.*` 아님):
 
 ```
 export HADOOP_CONF_DIR=/etc/hadoop/conf
@@ -72,14 +73,16 @@ pyspark --driver-memory 4g --executor-memory 8g --num-executors 4 \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
   --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkCatalog \
   --conf spark.sql.catalog.spark_catalog.type=hive \
+  --conf spark.sql.catalog.spark_catalog.uri=thrift://ccycloud-5.jshin.root.comops.site:9083 \
+  --conf spark.sql.catalog.spark_catalog.warehouse=hdfs://ns1/user/hive/warehouse \
   --conf spark.hadoop.fs.defaultFS=hdfs://ns1
 ```
 
 ```python
 staging = "hdfs://ns1/user/kdap/staging/sdv"
-spark.read.parquet(f"{staging}/bts_master.parquet").writeTo("iceberg.kdap.bts_master").overwritePartitions()
-spark.read.parquet(f"{staging}/cdr_sgi_raw.parquet").writeTo("iceberg.kdap.cdr_sgi_raw").append()
-spark.read.parquet(f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo("iceberg.kdap.cdr_mdt_smsng_raw").append()
+spark.read.parquet(f"{staging}/bts_master.parquet").writeTo("spark_catalog.kdap.bts_master").overwritePartitions()
+spark.read.parquet(f"{staging}/cdr_sgi_raw.parquet").writeTo("spark_catalog.kdap.cdr_sgi_raw").append()
+spark.read.parquet(f"{staging}/cdr_mdt_smsng_raw.parquet").writeTo("spark_catalog.kdap.cdr_mdt_smsng_raw").append()
 ```
 
 Impala 메타데이터 갱신:
